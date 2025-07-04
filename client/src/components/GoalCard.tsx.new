@@ -1,0 +1,1056 @@
+import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Trash2, EditIcon, Plus, ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Calendar as CalendarIcon, Download, Search } from "lucide-react";
+import Calendar from 'react-calendar';
+// Import our custom calendar styles instead of the default ones
+// import 'react-calendar/dist/Calendar.css';
+import { jsPDF } from 'jspdf';
+import { format, parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Goal } from "@shared/schema";
+import { Link } from "wouter";
+import DOMPurify from 'dompurify';
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { useTheme } from "@/components/theme-provider";
+
+// Helper function to create image thumbnails for PDF
+const createThumbnail = async (url: string, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
+// Document icon for PDF export
+const DOC_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA5ElEQVR4nO2UQQ6CMBBFf40ncOIKOjrqJYwH4QjqDXRTBxcP4klYdXIy0dFgoKVpSAgJQ/8YoKWUAQYXX/KShmbe79Aw0L96cgAeQCKiG7AGXFMFQmAnwTugNAksgYsEP4BGJH4GnhK0EfiyeCNBe+AkQXPgKsHRO/FXKS6AswTcgRA4SPLYniwSkTXQk4SJHP+jiGbAVEQzEU0keVcldwE6SXSW4B3QmoiHspHEIppL8Ku4Kx7IRh4SvAPWJuIAqCW5kuShnK9lEh8koJHj8jOgcwEiuVlHleyYaq0L0JfVPU1wI9PEPkAfOErCj5aokWObyya+7qc1zrebellQAAAABJRU5ErkJggg==";
+
+interface GoalCardProps {
+  goal: Goal;
+  level?: number;
+}
+
+export function GoalCard({ goal, level = 0 }: GoalCardProps) {
+  const { theme } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedGoal, setEditedGoal] = useState({ ...goal });
+  const [showAddSub, setShowAddSub] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(() => {
+    const saved = localStorage.getItem(`filter_start_${goal.id}`);
+    return saved ? new Date(saved) : null;
+  });
+  const [endDate, setEndDate] = useState<Date | null>(() => {
+    const saved = localStorage.getItem(`filter_end_${goal.id}`);
+    return saved ? new Date(saved) : null;
+  });
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  // Define an interface for journal entries
+  interface JournalEntry {
+    goalId: string | undefined;
+    text: string;
+    date: string;
+  }
+
+  const [filteredEntries, setFilteredEntries] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      try {
+        const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+        const filtered = entries.filter((entry: JournalEntry) => {
+          if (!entry.date || entry.goalId !== goal.id.toString()) return false;
+          const entryDate = new Date(entry.date);
+          return isWithinInterval(entryDate, {
+            start: startOfDay(startDate),
+            end: endOfDay(endDate)
+          });
+        });
+        setFilteredEntries(filtered);
+      } catch (error) {
+        console.error('Error filtering entries:', error);
+        setFilteredEntries([]);
+      }
+    }
+  }, [startDate, endDate, goal.id]);
+  const [searchDate, setSearchDate] = useState<string | null>(null); // Added state for search date
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: allGoals } = useQuery<Goal[]>({
+  });
+
+  const subGoals = allGoals?.filter((g) => g.parentId === goal.id);
+  const hasSubGoals = subGoals && subGoals.length > 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/goals/${goal.id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Deleted!", description: "Goal removed successfully" });
+    },
+    onError: () => {
+      toast({
+        title: "Error!",
+        description: "Failed to delete goal",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", `/api/goals/${goal.id}`, {
+        title: editedGoal.title,
+        description: editedGoal.description,
+      }),
+    onSuccess: () => {
+      setIsEditing(false);
+      toast({ title: "Updated!", description: "Goal saved successfully" });
+    },
+  });
+
+  const addSubMutation = useMutation({
+    mutationFn: (newSub: Partial<Goal>) =>
+      apiRequest("POST", "/api/goals", {
+        ...newSub,
+        parentId: goal.id,
+      }),
+    onSuccess: () => {
+      setShowAddSub(false);
+      toast({ title: "Success!", description: "Sub-goal added" });
+    },
+  });
+
+  const handleSearch = () => {
+    if (!startDate || !endDate) return;
+
+    try {
+      const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+      // Get all entries in date range for this goal
+      const filtered = entries.filter((entry: JournalEntry) => {
+        if (!entry.date || entry.goalId !== goal.id.toString()) return false;
+        const entryDate = new Date(entry.date);
+        return isWithinInterval(entryDate, {
+          start: startOfDay(startDate),
+          end: endOfDay(endDate)
+        });
+      });
+
+      // For displaying purposes, we still want to set all filtered entries
+      // so users can see all updates in the date range
+      setFilteredEntries(filtered);
+
+      // Display a message about the search results
+      if (filtered.length > 0) {
+        // Sort entries by date to get the most recent one first
+        const sortedEntries = [...filtered].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        // Let the user know we found entries, but we'll only use the latest one for output
+        toast({ 
+          title: "Search Complete", 
+          description: `Found ${filtered.length} entries between the selected dates. The latest update will be used for the PDF.` 
+        });
+      } else {
+        toast({ 
+          title: "No Results", 
+          description: "No entries found for this goal in the selected date range." 
+        });
+      }
+    } catch (error) {
+      console.error('Error searching entries:', error);
+      setFilteredEntries([]);
+      toast({
+        title: "Error",
+        description: "Could not perform the search. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (startDate) {
+      localStorage.setItem(`filter_start_${goal.id}`, startDate.toISOString());
+    }
+    if (endDate) {
+      localStorage.setItem(`filter_end_${goal.id}`, endDate.toISOString());
+    }
+  }, [startDate, endDate, goal.id]);
+
+  return (
+    <div className={`${level > 0 ? 'ml-4' : ''} w-full`}>
+      <Card className={`bg-card card-hover glow-effect ${level === 0 ? 'min-h-[280px]' : 'min-h-[180px]'} flex flex-col w-full relative overflow-hidden`}>
+        {/* Decorative card accent border */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
+
+        <CardHeader className="py-3 px-4 flex-shrink-0 border-b">
+          <div className="flex flex-col w-full">
+            <div className="flex justify-between items-center w-full">
+              <div
+                className="flex items-center gap-2 cursor-pointer flex-1 group"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {hasSubGoals ? (
+                  <div className="flex items-center transition-transform duration-300 ease-in-out">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                    )}
+                    {isExpanded ? (
+                      <FolderOpen className="h-5 w-5 text-yellow-500 ml-1 transition-all group-hover:text-yellow-600 group-hover:scale-110" />
+                    ) : (
+                      <Folder className="h-5 w-5 text-yellow-500 ml-1 transition-all group-hover:text-yellow-600 group-hover:scale-110" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-9" /> // Spacer for alignment
+                )}
+                <div>
+                  <CardTitle className={`text-base font-medium truncate transition-colors duration-300 group-hover:text-primary ${hasSubGoals ? 'text-primary' : ''} card-title`}>
+                    {goal.title}
+                  </CardTitle>
+                  {goal.description && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPreview(true);
+                      }}
+                      className="text-sm text-muted-foreground mt-1 flex items-center hover:text-primary transition-colors duration-300 group-hover:text-primary/80 card-content"
+                    >
+                      <FileText className="h-4 w-4 mr-1 transition-transform group-hover:scale-110" />
+                      <span className="line-clamp-1">{goal.description.slice(0, 50)}{goal.description.length > 50 ? '...' : ''}</span>
+                    </button>
+                  )}
+                </div>
+                {hasSubGoals && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-2 transition-all group-hover:bg-primary/20">
+                    {subGoals.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-1 shrink-0 items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(true);
+                    setShowAddSub(true);
+                  }}
+                  title="Add Sub-Goal"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <Plus className="h-4 w-4 text-primary" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  title="Edit"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <EditIcon className="h-4 w-4 text-amber-500" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this goal?')) {
+                      deleteMutation.mutate();
+                    }
+                  }}
+                  title="Delete"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-3 pb-2 overflow-y-auto flex-grow border-t mt-2 card-content">
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="relative">
+              <Popover open={showStartCalendar} onOpenChange={setShowStartCalendar}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    {startDate ? format(startDate, 'MMM d, yyyy') : 'Start Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0"
+                  side="bottom"
+                  align="start"
+                  collisionPadding={16}
+                  avoidCollisions={true}
+                  style={{
+                    maxHeight: '70vh',
+                    overflowY: 'auto'
+                  }}
+                >
+                  <Calendar
+                    value={startDate}
+                    onChange={(date) => {
+                      setStartDate(date as Date);
+                      setShowStartCalendar(false);
+                    }}
+                    className={`border-0 ${theme === 'dark' ? 'dark' : ''}`}
+                    minDetail="month"
+                    view="month"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="relative">
+              <Popover open={showEndCalendar} onOpenChange={setShowEndCalendar}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    {endDate ? format(endDate, 'MMM d, yyyy') : 'End Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0" 
+                  align="center"
+                  side="bottom"
+                  sideOffset={5}
+                  alignOffset={0}
+                  avoidCollisions={true}
+                >
+                  <Calendar
+                    value={endDate}
+                    onChange={(date) => {
+                      setEndDate(date as Date);
+                      setShowEndCalendar(false);
+                    }}
+                    className={`border-0 ${theme === 'dark' ? 'dark' : ''}`}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <Button
+              variant="default"
+              onClick={handleSearch}
+              disabled={!startDate || !endDate}
+              className="btn-hover-effect relative overflow-hidden"
+            >
+              <Search className="h-4 w-4 mr-1" />
+              Search
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const doc = new jsPDF();
+                  doc.setFontSize(16);
+                  doc.setFont('helvetica', 'bold');
+                  doc.text(goal.title, 20, 20);
+
+                  doc.setFontSize(12);
+                  doc.setFont('helvetica', 'normal');
+                  let yPosition = 40;
+                  const pageHeight = doc.internal.pageSize.height;
+                  const margin = 20;
+
+                  // Get entries from localStorage
+                  const entries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+                  const goalEntries = entries.filter(entry => entry.goalId === goal.id.toString());
+
+                  if (goalEntries.length > 0) {
+                    doc.text("Journal Entries:", margin, yPosition);
+                    yPosition += 10;
+
+                    for (const entry of goalEntries) {
+                      const date = format(new Date(entry.date), 'MMMM d, yyyy');
+                      doc.setFont('helvetica', 'bold');
+                      doc.text(date, margin, yPosition);
+                      yPosition += 10;
+
+                      doc.setFont('helvetica', 'normal');
+                      const text = entry.text.replace(/<[^>]*>/g, ''); // Remove HTML tags
+                      const lines = doc.splitTextToSize(text, 170);
+                      
+                      for (const line of lines) {
+                        if (yPosition > pageHeight - 20) {
+                          doc.addPage();
+                          yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 7;
+                      }
+                      yPosition += 10;
+                    }
+                  } else {
+                    doc.text("No entries found for this goal.", margin, yPosition);
+                  }
+
+                  // Get only the latest content for this goal in the date range
+                  if (filteredEntries.length > 0) {
+                    // Sort entries by date (newest first)
+                    const sortedEntries = [...filteredEntries].sort((a, b) => 
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+
+                    // Get the latest entry for the goal
+                    const latestEntry = sortedEntries[0];
+
+                    // Display the latest entry
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text("Latest Content:", margin, yPosition);
+                    yPosition += 10;
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(12);
+
+                    const date = format(new Date(latestEntry.date), 'MMMM d, yyyy');
+                    doc.text(`Last Updated: ${date}`, margin, yPosition);
+                    yPosition += 10;
+
+                    // Process the entry text to find and extract images
+                    // Use DOMPurify to safely handle HTML content
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = DOMPurify.sanitize(latestEntry.text);
+
+                    // Define the media handling function for both images and documents
+                    const handleMediaElement = async (
+                      element: HTMLElement,
+                      position: { y: number }
+                    ) => {
+                      const isImage = element.hasAttribute('data-type') 
+                        ? element.getAttribute('data-type') === 'image'
+                        : element.tagName.toLowerCase() === 'img';
+                      const url = element.getAttribute('data-url') || element.getAttribute('src') || element.getAttribute('href');
+                      let title = element.getAttribute('data-title') || '';
+                      if (!title && url) {
+                        title = decodeURIComponent(url.split('/').pop() || '');
+                      }
+                      const size = element.getAttribute('data-size');
+                      const dateDiv = element.querySelector('.text-xs.text-gray-400');
+                      const date = dateDiv ? dateDiv.textContent : '';
+
+                      const ICON_SIZE = isImage ? 80 : 30;
+                      const TEXT_OFFSET = isImage ? 35 : 20;
+
+                      try {
+                        if (isImage && url) {
+                          // Create a thumbnail asynchronously
+                          const thumbnail = await createThumbnail(url, 100, 100);
+                          
+                          // Add thumbnail image to PDF
+                          doc.addImage(thumbnail, 'JPEG', margin, position.y, ICON_SIZE, ICON_SIZE);
+                          
+                          // Make image clickable
+                          doc.link(margin, position.y, ICON_SIZE, ICON_SIZE, { url });
+                          
+                          // Add preview text for image
+                          doc.setFontSize(8);
+                          doc.setFont('helvetica', 'italic');
+                          doc.setTextColor(0, 0, 255); // Blue for clickable text
+                          doc.text("(Click to preview)", margin, position.y + ICON_SIZE + 5);
+                          doc.setTextColor(0, 0, 0); // Reset text color
+                        } else if (url) {
+                          // For documents, use a document icon
+                          doc.addImage(DOC_ICON, 'PNG', margin, position.y, ICON_SIZE/2, ICON_SIZE/2);
+                          
+                          // Make document clickable
+                          doc.link(margin, position.y, ICON_SIZE/2, ICON_SIZE/2, { url });
+                          
+                          // Add preview text for document
+                          doc.setFontSize(8);
+                          doc.setFont('helvetica', 'italic');
+                          doc.setTextColor(0, 0, 255); // Blue for clickable text
+                          doc.text("(Click to open)", margin, position.y + ICON_SIZE/2 + 5);
+                          doc.setTextColor(0, 0, 0); // Reset text color
+                        }
+                      } catch (error) {
+                        console.error('Error processing media:', error);
+                        // Add a fallback icon when image processing fails
+                        const IMAGE_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA+0lEQVR4nO2UMQ6CMBiFf40ncOIKOjp6CeNBPIJ6A93UwcWDeBJWnZxMdDQYtgYICRKG9xpaaEopYHDxJV8C6Xv/17wWvWvyAEPIBXRDVgDnqkCEbCTwB1QmQSWwEWCH0ArEj8DTwnaCnxZvJGgR+AkQXPgKsHxO/FXKS6AswTcgQg4SPLEniwWkTXQk4SJnMBjEc2AtFc8FtFSNteTpE/uIppL8gbopbgrHshGHhK8A9Ym4gBoJLmS5JGcr2USHySglePyM6BzASK5WUeV7JhqrQvQl9U9TXAj08Q+QB84SsKPlqiVY5vLJpYDOxHFX4krL/IPegKg7qc1zrebellQAAAABJRU5ErkJggg==";
+                        const fallbackIcon = isImage ? IMAGE_ICON : DOC_ICON;
+                        doc.addImage(fallbackIcon, 'PNG', margin, position.y, ICON_SIZE/2, ICON_SIZE/2);
+                      }
+
+                      // Add the file title
+                      doc.setFontSize(10);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setTextColor(0, 0, 255);
+                      doc.text(title, margin + TEXT_OFFSET, position.y + (ICON_SIZE/3), {
+                        baseline: 'middle'
+                      });
+                      if (url) {
+                        doc.link(margin + TEXT_OFFSET, position.y, doc.getTextWidth(title), ICON_SIZE/2, { url });
+                      }
+                      doc.setTextColor(0, 0, 0);
+
+                      // Add file size if available
+                      if (size) {
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'italic');
+                        const sizeText = `${Math.round(parseInt(size) / 1024)} KB`;
+                        doc.text(sizeText, margin + TEXT_OFFSET, position.y + (ICON_SIZE/2));
+                      }
+                      // Add date if available
+                      if (date) {
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'italic');
+                        doc.text(date, margin + TEXT_OFFSET, position.y + (ICON_SIZE/2) + 5);
+                      }
+
+                      // Update position for next element
+                      position.y += isImage ? ICON_SIZE + 15 : ICON_SIZE/2 + 15;
+
+                      // Add a new page if needed
+                      if (position.y > pageHeight - margin) {
+                        doc.addPage();
+                        position.y = 20;
+                      }
+                    };
+
+                    // Process each paragraph or element
+                    const processEntry = async () => {
+                      // Process text content first
+                      let plainText = '';
+                      const textNodes = Array.from(tempDiv.childNodes).filter(
+                        node => node.nodeType === Node.TEXT_NODE || 
+                              (node instanceof HTMLElement && 
+                                !node.matches('img, span[data-preview], [data-type="image"], [data-type="document"]')
+                              )
+                      );
+
+                      // Extract the plain text from non-media nodes
+                      plainText = textNodes.map(node => node.textContent || '').join('\n');
+
+                      // Add the clean text to PDF
+                      const lines = doc.splitTextToSize(plainText.trim(), 170) as string[];
+                      for (const line of lines) {
+                        if (line.trim() === '') continue; // Skip empty lines
+
+                        if (yPosition > pageHeight - 20) {
+                          doc.addPage();
+                          yPosition = 20;
+                        }
+                        doc.text(line, margin, yPosition);
+                        yPosition += 7;
+                      }
+
+                      // Now process media elements (images and documents)
+                      const mediaElements = Array.from(tempDiv.querySelectorAll('img, span[data-preview], [data-type="image"], [data-type="document"]'));
+
+                      if (mediaElements.length > 0) {
+                        yPosition += 15; // Space before media section
+
+                        // Add media header
+                        doc.setFontSize(14);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text("Embedded Media:", margin, yPosition);
+                        yPosition += 10;
+
+                        // Process each media element
+                        for (const element of mediaElements) {
+                          if (element instanceof HTMLElement) {
+                            await handleMediaElement(element, { y: yPosition });
+                          }
+                        }
+                      }
+
+                      // Reset font
+                      doc.setFontSize(12);
+                      doc.setFont('helvetica', 'normal');
+                    };
+
+                    await processEntry();
+                    yPosition += 15;
+                  }
+
+                  // Include sub-goals in the date range if available
+                  if (subGoals && subGoals.length > 0) {
+                    if (yPosition > pageHeight - 40) {
+                      doc.addPage();
+                      yPosition = 20;
+                    }
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text("Sub-Goals:", margin, yPosition);
+                    yPosition += 10;
+
+                    // For each sub-goal, get the latest content in date range
+                    // Use for...of instead of forEach for async/await support
+                    for (const subGoal of subGoals) {
+                      if (yPosition > pageHeight - 30) {
+                        doc.addPage();
+                        yPosition = 20;
+                      }
+
+                      // Title of the sub-goal
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(12);
+                      doc.text(subGoal.title, margin, yPosition);
+                      yPosition += 7;
+
+                      // Get entries for this sub-goal
+                      try {
+                        const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+                        const subGoalEntries = entries.filter((entry: JournalEntry) => {
+                          if (!entry.date || entry.goalId !== subGoal.id.toString()) return false;
+                          const entryDate = new Date(entry.date);
+                          return startDate && endDate && isWithinInterval(entryDate, {
+                            start: startOfDay(startDate),
+                            end: endOfDay(endDate)
+                          });
+                        });
+
+                        if (subGoalEntries.length > 0) {
+                          // Sort entries by date (newest first)
+                          const sortedEntries = [...subGoalEntries].sort((a, b) => 
+                            new Date(b.date).getTime() - new Date(a.date).getTime()
+                          );
+
+                          // Get the latest entry for the sub-goal
+                          const latestSubGoalEntry = sortedEntries[0];
+
+                          doc.setFont('helvetica', 'normal');
+                          doc.setFontSize(10);
+                          const date = format(new Date(latestSubGoalEntry.date), 'MMMM d, yyyy');
+                          doc.text(`Last Updated: ${date}`, margin + 5, yPosition);
+                          yPosition += 5;
+
+                          // Process the sub-goal entry to extract images
+                          const subGoalTempDiv = document.createElement('div');
+                          subGoalTempDiv.innerHTML = DOMPurify.sanitize(latestSubGoalEntry.text);
+
+                          // Process text content (without images and documents)
+                          let subGoalPlainText = '';
+                          let nodes = Array.from(subGoalTempDiv.childNodes);
+
+                          // Extract only text nodes and non-media elements
+                          nodes.forEach(node => {
+                            if (node.nodeType === Node.TEXT_NODE || 
+                                (node instanceof HTMLElement && 
+                                !node.hasAttribute('data-preview') && 
+                                !node.matches('img, [data-type="image"], [data-type="document"]'))) {
+                              subGoalPlainText += node.textContent;
+                            }
+                          });
+
+                          // Clean up the text
+                          subGoalPlainText = subGoalPlainText.trim();
+
+                          // Add the clean text to PDF
+                          const lines = doc.splitTextToSize(subGoalPlainText.trim(), 160) as string[];
+                          lines.forEach((line: string) => {
+                            if (line.trim() === '') return; // Skip empty lines
+
+                            if (yPosition > pageHeight - 20) {
+                              doc.addPage();
+                              yPosition = 20;
+                            }
+                            doc.text(line, margin + 5, yPosition);
+                            yPosition += 6;
+                          });
+
+                          // Process images with enhanced quality for sub-goals
+                          const subGoalImageElements = subGoalTempDiv.querySelectorAll('span[data-preview][data-type="image"], img');
+                          if (subGoalImageElements.length > 0) {
+                            yPosition += 10; // Space before images section
+
+                            // Add images header for sub-goal
+                            doc.setFontSize(11);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text("Images:", margin + 5, yPosition);
+                            yPosition += 6;
+
+                            // Use for...of instead of forEach for async/await support
+                            for (let index = 0; index < subGoalImageElements.length; index++) {
+                              const imgElement = subGoalImageElements[index];
+                              const img = imgElement.querySelector('img') || (imgElement.tagName.toLowerCase() === 'img' ? imgElement : null);
+                              const imgSrc = img ? img.src : imgElement.getAttribute('data-url');
+                              
+                              if (imgSrc) {
+                                try {
+                                  // Check if we need a new page for the image
+                                  if (yPosition > pageHeight - 80) {
+                                    doc.addPage();
+                                    yPosition = 20;
+                                  }
+
+                                  // Enhanced image display - better dimensions for subgoals
+                                  const imgWidth = 60; // Improved image size 
+                                  const imgHeight = 50; // Improved image size
+
+                                  // Add image title with better formatting
+                                  const imgTitle = imgElement.getAttribute('data-title') || 'Image';
+                                  doc.setFontSize(10);
+                                  doc.setFont('helvetica', 'bold');
+                                  doc.text(imgTitle, margin + 8, yPosition);
+                                  yPosition += 5;
+
+                                  // Add timestamp if available
+                                  const dateDiv = imgElement.querySelector('.text-xs.text-gray-400');
+                                  if (dateDiv) {
+                                    doc.setFontSize(8);
+                                    doc.setFont('helvetica', 'italic');
+                                    doc.text(dateDiv.textContent || '', margin + 8, yPosition);
+                                    yPosition += 4;
+                                  }
+
+                                  // Create and add thumbnail for better quality and compatibility
+                                  const thumbnail = await createThumbnail(imgSrc, imgWidth, imgHeight);
+                                  doc.addImage(
+                                    thumbnail, 
+                                    'JPEG', 
+                                    margin + 8, 
+                                    yPosition, 
+                                    imgWidth, 
+                                    imgHeight
+                                  );
+
+                                  // Make image clickable - opens in browser when clicked
+                                  doc.link(
+                                    margin + 8, 
+                                    yPosition, 
+                                    imgWidth, 
+                                    imgHeight, 
+                                    { url: imgSrc }
+                                  );
+
+                                  // Add caption below image
+                                  yPosition += imgHeight + 4;
+                                  doc.setFontSize(8);
+                                  doc.setFont('helvetica', 'italic');
+                                  doc.setTextColor(0, 0, 255); // Blue for clickable text
+                                  doc.text("(Click to preview)", margin + 8, yPosition);
+                                  doc.setTextColor(0, 0, 0); // Reset text color
+
+                                  // Move position for next item
+                                  yPosition += 10;
+
+                                  // Reset font for next text
+                                  doc.setFontSize(10);
+                                  doc.setFont('helvetica', 'normal');
+                                } catch (error) {
+                                  console.error('Error adding sub-goal image to PDF:', error);
+                                  // Fallback - add image name as text without thumbnails
+                                  const imgTitle = imgElement.getAttribute('data-title') || 'Image';
+                                  doc.setFontSize(10);
+                                  doc.setFont('helvetica', 'bold');
+                                  doc.text(`[Image: ${imgTitle}]`, margin + 5, yPosition);
+                                  yPosition += 7;
+                                }
+                              }
+                            }
+                          }
+
+                          // Process and add document links for sub-goals with improved formatting
+                          const subGoalDocumentElements = subGoalTempDiv.querySelectorAll('span[data-preview][data-type="document"]');
+                          if (subGoalDocumentElements.length > 0) {
+                            yPosition += 10; // Space before documents section
+
+                            doc.setFontSize(11);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text("Documents:", margin + 5, yPosition);
+                            yPosition += 7;
+
+                            // Use for...of instead of forEach for consistency
+                            for (let index = 0; index < subGoalDocumentElements.length; index++) {
+                              const docElement = subGoalDocumentElements[index];
+                              // Get document URL and title
+                              const docUrl = docElement.getAttribute('data-url');
+                              const docTitle = docElement.getAttribute('data-title') || 'Document';
+
+                              if (docUrl) {
+                                // Check if we need a new page
+                                if (yPosition > pageHeight - 25) {
+                                  doc.addPage();
+                                  yPosition = 20;
+                                }
+
+                                // Add document icon (smaller for subgoals)
+                                doc.addImage(DOC_ICON, 'PNG', margin + 5, yPosition, 15, 15);
+                                
+                                // Add document title with better formatting
+                                doc.setFontSize(10);
+                                doc.setFont('helvetica', 'bold');
+                                doc.setTextColor(0, 0, 255); // Blue color for links
+                                doc.text(docTitle, margin + 25, yPosition + 4);
+
+                                // Make it clickable
+                                doc.link(
+                                  margin + 25, 
+                                  yPosition, 
+                                  doc.getTextWidth(docTitle), 
+                                  8, 
+                                  { url: docUrl }
+                                );
+
+                                // Add file size if available
+                                const sizeText = docElement.querySelector('.text-xs.text-gray-500');
+                                if (sizeText) {
+                                  doc.setFontSize(7);
+                                  doc.setFont('helvetica', 'normal');
+                                  doc.setTextColor(0, 0, 0); // Reset text color
+                                  doc.text(sizeText.textContent || '', margin + 25, yPosition + 12);
+                                }
+
+                                // Add date if available
+                                const dateDiv = docElement.querySelector('.text-xs.text-gray-400');
+                                if (dateDiv) {
+                                  doc.setFontSize(7);
+                                  doc.setFont('helvetica', 'italic');
+                                  doc.text(dateDiv.textContent || '', margin + 25, yPosition + 16);
+                                }
+
+                                // Add clickable text indicator
+                                doc.setFontSize(7);
+                                doc.setFont('helvetica', 'italic');
+                                doc.setTextColor(0, 0, 255); // Blue for clickable text
+                                doc.text("(Click to open)", margin + 25, yPosition + 20);
+
+                                // Reset text color and move position
+                                doc.setTextColor(0, 0, 0);
+                                yPosition += 25; // More space between documents
+                              }
+                            }
+
+                            // Reset font
+                            doc.setFontSize(10);
+                            doc.setFont('helvetica', 'normal');
+                          }
+                        } else {
+                          doc.setFont('helvetica', 'italic');
+                          doc.setFontSize(10);
+                          doc.text("No updates in selected date range", margin + 5, yPosition);
+                        }
+                      } catch (error) {
+                        console.error('Error getting sub-goal entries:', error);
+                      }
+
+                      yPosition += 10;
+                    }
+                  }
+
+                  // Save the PDF with the goal title as the filename
+                  doc.save(`${goal.title}-entries.pdf`);
+                } catch (error) {
+                  console.error('Error generating PDF:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to generate PDF. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              disabled={filteredEntries.length === 0}
+              className="flex items-center gap-2 btn-hover-effect border-primary/30 hover:bg-primary/5"
+            >
+              <Download className="h-4 w-4 text-primary icon-pulse" />
+              Download PDF
+            </Button>
+          </div>
+
+          {filteredEntries.length > 0 && (
+            <div className="mt-4 max-h-60 overflow-y-auto border rounded-lg p-4">
+              {filteredEntries.map((entry, index) => (
+                <div 
+                  className={`mb-2 pb-2 border-b last:border-b-0 ${
+                    entry.date === searchDate ? 'border-2 border-primary rounded p-2' : ''
+                  }`}
+                >
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(entry.date), 'MMM d, yyyy')}
+                  </div>
+                  <div 
+                    className="mt-1 text-sm" 
+                    dangerouslySetInnerHTML={{ __html: entry.text }} 
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isExpanded && hasSubGoals && (
+            <div className="mt-4 pl-4 space-y-2 border-l-2 border-primary/30">
+              <h4 className="text-sm font-medium text-primary border-b pb-1 flex items-center">
+                <FolderOpen className="h-4 w-4 mr-1" /> Sub-Goals
+              </h4>
+              {subGoals.map((sg) => (
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Goal Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Goal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={editedGoal.title}
+                onChange={(e) =>
+                  setEditedGoal({ ...editedGoal, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={editedGoal.description || ""}
+                onChange={(e) =>
+                  setEditedGoal({
+                    ...editedGoal,
+                    description: e.target.value,
+                  })
+                }
+                rows={5}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditing(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sub-Goal Dialog */}
+      <Dialog open={showAddSub} onOpenChange={setShowAddSub}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Sub-Goal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Enter sub-goal title"
+                onChange={(e) =>
+                  setEditedGoal({ ...editedGoal, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description (Optional)</label>
+              <Textarea
+                placeholder="Enter sub-goal description"
+                onChange={(e) =>
+                  setEditedGoal({
+                    ...editedGoal,
+                    description: e.target.value,
+                  })
+                }
+                rows={5}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddSub(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => addSubMutation.mutate(editedGoal)}
+              disabled={addSubMutation.isPending || !editedGoal.title?.trim()}
+            >
+              {addSubMutation.isPending ? "Adding..." : "Add Sub-Goal"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>{goal.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[65vh] overflow-y-auto">
+            <div className="prose dark:prose-invert max-w-none">
+              <h3>Description</h3>
+              <p className="text-base whitespace-pre-wrap">{goal.description}</p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,0 +1,1816 @@
+import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Trash2, EditIcon, Plus, ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Calendar as CalendarIcon, Download, Search } from "lucide-react";
+import Calendar from 'react-calendar';
+// Import our custom calendar styles instead of the default ones
+// import 'react-calendar/dist/Calendar.css';
+import { jsPDF } from 'jspdf';
+import { format, parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Goal } from "@shared/schema";
+import { Link } from "wouter";
+import DOMPurify from 'dompurify';
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { useTheme } from "@/components/theme-provider";
+
+// Helper function to create image thumbnails for PDF with memory optimization
+const createThumbnail = async (url: string, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+
+        let width = img.width;
+        let height = img.height;
+        const aspectRatio = width / height;
+
+        // Calculate dimensions while maintaining aspect ratio
+        if (width > height) {
+          width = Math.min(width, maxWidth);
+          height = width / aspectRatio;
+        } else {
+          height = Math.min(height, maxHeight);
+          width = height * aspectRatio;
+        }
+
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+
+        // Use low quality for PDF to reduce memory usage
+        ctx.imageSmoothingQuality = 'low';
+
+        // Draw and get thumbnail with lower quality for PDFs
+        ctx.drawImage(img, 0, 0, width, height);
+        const thumbnail = canvas.toDataURL("image/jpeg", 0.4); // Lower quality for PDF
+
+        // Clear memory
+        canvas.width = 0;
+        canvas.height = 0;
+        resolve(thumbnail);
+      } catch (error) {
+        reject(error);
+      } finally {
+        // Clear image reference
+        img.src = '';
+        img.onload = null;
+        img.onerror = null;
+      }
+    };
+    img.onerror = (error) => {
+      reject(new Error(`Failed to load image: ${error}`));
+    };
+    img.src = url;
+  });
+};
+
+// Helper function to attempt clearing memory
+function gc() {
+  // Try to use browser's gc if available (Chrome dev tools)
+  if ((window as any).gc) {
+    (window as any).gc();
+  } else {
+    console.log('Manual memory cleanup');
+    // Force garbage collection by creating and clearing large objects
+    const arr = [];
+    for (let i = 0; i < 1000; i++) {
+      arr.push(new ArrayBuffer(1024 * 10));
+    }
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = null;
+    }
+  }
+}
+
+// Format media elements for display in the preview
+function formatMediaElements(description: string): string {
+  if (!description) return '';
+
+  // Create temporary div to parse and manipulate the description content
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = description;
+
+  // Process images
+  const imageElements = Array.from(tempDiv.querySelectorAll('img, [data-type="image"]'));
+  imageElements.forEach(element => {
+    if (element instanceof HTMLElement) {
+      const imgEl = element.tagName.toLowerCase() === 'img' ? element as HTMLImageElement : element.querySelector('img');
+      const imgSrc = imgEl?.src || element.getAttribute('data-url') || '';
+      const fileName = imgSrc.split('/').pop() || 'image';
+      const fileSize = element.getAttribute('data-size') || '0';
+      const uploadDate = element.getAttribute('data-date') || format(new Date(), 'PPP');
+      
+      const formattedSize = fileSize ? `${(parseInt(fileSize) / 1024).toFixed(1)}KB` : '';
+      
+      // Create a preview element with hover effect
+      const previewHTML = `
+        <div class="media-preview-container mb-4">
+          <a href="${imgSrc}" target="_blank" class="media-preview-link">
+            <div class="flex items-center p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-accent transition-colors">
+              <span class="mr-2 text-lg">🖼️</span>
+              <div class="flex-1">
+                <div class="font-medium">${fileName}</div>
+                <div class="text-xs text-muted-foreground">${formattedSize} - ${uploadDate}</div>
+              </div>
+              <div class="text-xs text-blue-500 hover:underline">(click to view)</div>
+            </div>
+          </a>
+          <div class="image-preview mt-2 relative max-h-60 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+            <a href="${imgSrc}" target="_blank">
+              <img src="${imgSrc}" alt="${fileName}" class="w-full object-contain" />
+            </a>
+          </div>
+        </div>
+      `;
+      
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = previewHTML;
+      element.replaceWith(wrapper);
+    }
+  });
+
+  // Process documents
+  const docElements = Array.from(tempDiv.querySelectorAll('[data-type="document"]'));
+  docElements.forEach(element => {
+    if (element instanceof HTMLElement) {
+      const docUrl = element.getAttribute('data-url') || '';
+      const fileName = element.getAttribute('data-title') || docUrl.split('/').pop() || 'document';
+      const fileSize = element.getAttribute('data-size') || '0';
+      const uploadDate = element.getAttribute('data-date') || format(new Date(), 'PPP');
+      
+      const formattedSize = fileSize ? `${(parseInt(fileSize) / 1024).toFixed(1)}KB` : '';
+      
+      const previewHTML = `
+        <div class="media-preview-container mb-4">
+          <a href="${docUrl}" target="_blank" class="media-preview-link">
+            <div class="flex items-center p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-accent transition-colors">
+              <span class="mr-2 text-lg">📄</span>
+              <div class="flex-1">
+                <div class="font-medium">${fileName}</div>
+                <div class="text-xs text-muted-foreground">${formattedSize} - ${uploadDate}</div>
+              </div>
+              <div class="text-xs text-blue-500 hover:underline">(click to view)</div>
+            </div>
+          </a>
+        </div>
+      `;
+      
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = previewHTML;
+      element.replaceWith(wrapper);
+    }
+  });
+
+  // Look for Markdown style links and transform them
+  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)(\s*\*\([^)]*\)\*)?/g;
+  const htmlContent = tempDiv.innerHTML;
+  
+  const processedContent = htmlContent.replace(markdownLinkRegex, (match, title, url, hoverText) => {
+    const isImage = url.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+    const emoji = isImage ? '🖼️' : '📄';
+    const formattedDate = format(new Date(), 'PPP');
+    
+    if (isImage) {
+      return `
+        <div class="media-preview-container mb-4">
+          <a href="${url}" target="_blank" class="media-preview-link">
+            <div class="flex items-center p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-accent transition-colors">
+              <span class="mr-2 text-lg">${emoji}</span>
+              <div class="flex-1">
+                <div class="font-medium">${title}</div>
+                <div class="text-xs text-muted-foreground">${formattedDate}</div>
+              </div>
+              <div class="text-xs text-blue-500 hover:underline">(click to view)</div>
+            </div>
+          </a>
+          <div class="image-preview mt-2 relative max-h-60 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+            <a href="${url}" target="_blank">
+              <img src="${url}" alt="${title}" class="w-full object-contain" />
+            </a>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="media-preview-container mb-4">
+          <a href="${url}" target="_blank" class="media-preview-link">
+            <div class="flex items-center p-2 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-accent transition-colors">
+              <span class="mr-2 text-lg">${emoji}</span>
+              <div class="flex-1">
+                <div class="font-medium">${title}</div>
+                <div class="text-xs text-muted-foreground">${formattedDate}</div>
+              </div>
+              <div class="text-xs text-blue-500 hover:underline">(click to view)</div>
+            </div>
+          </a>
+        </div>
+      `;
+    }
+  });
+
+  return processedContent;
+}
+
+// Document icon for PDF export
+const DOC_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA5ElEQVR4nO2UQQ6CMBBFf40ncOIKOjrqJYwH4QjqDXRTBxcP4klYdXIy0dFgoKVpSAgJQ/8YoKWUAQYXX/KShmbe79Aw0L96cgAeQCKiG7AGXFMFQmAnwTugNAksgYsEP4BGJH4GnhK0EfiyeCNBe+AkQXPgKsHRO/FXKS6AswTcgRA4SPLYniwSkTXQk4SJHP+jiGbAVEQzEU0keVcldwE6SXSW4B3QmoiHspHEIppL8Ku4Kx7IRh4SvAPWJuIAqCW5kuShnK9lEh8koJHj8jOgcwEiuVlHleyYaq0L0JfVPU1wI9PEPkAfOErCj5aokWObyya+7qc1zrebellQAAAABJRU5ErkJggg==";
+
+interface GoalCardProps {
+  goal: Goal;
+  level?: number;
+}
+
+export function GoalCard({ goal, level = 0 }: GoalCardProps) {
+  const { theme } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedGoal, setEditedGoal] = useState({ ...goal });
+  const [showAddSub, setShowAddSub] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(() => {
+    const saved = localStorage.getItem(`filter_start_${goal.id}`);
+    return saved ? new Date(saved) : null;
+  });
+  const [endDate, setEndDate] = useState<Date | null>(() => {
+    const saved = localStorage.getItem(`filter_end_${goal.id}`);
+    return saved ? new Date(saved) : null;
+  });
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  // Define an interface for journal entries
+  interface JournalEntry {
+    goalId: string | undefined;
+    text: string;
+    date: string;
+  }
+
+  const [filteredEntries, setFilteredEntries] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      try {
+        const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+        const filtered = entries.filter((entry: JournalEntry) => {
+          if (!entry.date || entry.goalId !== goal.id.toString()) return false;
+          const entryDate = new Date(entry.date);
+          return isWithinInterval(entryDate, {
+            start: startOfDay(startDate),
+            end: endOfDay(endDate)
+          });
+        });
+        setFilteredEntries(filtered);
+      } catch (error) {
+        console.error('Error filtering entries:', error);
+        setFilteredEntries([]);
+      }
+    }
+  }, [startDate, endDate, goal.id]);
+  const [searchDate, setSearchDate] = useState<string | null>(null); // Added state for search date
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: allGoals } = useQuery<Goal[]>({
+  });
+
+  const subGoals = allGoals?.filter((g) => g.parentId === goal.id);
+  const hasSubGoals = subGoals && subGoals.length > 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/goals/${goal.id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Deleted!", description: "Goal removed successfully" });
+    },
+    onError: () => {
+      toast({
+        title: "Error!",
+        description: "Failed to delete goal",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", `/api/goals/${goal.id}`, {
+        title: editedGoal.title,
+        description: editedGoal.description,
+      }),
+    onSuccess: () => {
+      setIsEditing(false);
+      toast({ title: "Updated!", description: "Goal saved successfully" });
+    },
+  });
+
+  const addSubMutation = useMutation({
+    mutationFn: (newSub: Partial<Goal>) =>
+      apiRequest("POST", "/api/goals", {
+        ...newSub,
+        parentId: goal.id,
+      }),
+    onSuccess: () => {
+      setShowAddSub(false);
+      toast({ title: "Success!", description: "Sub-goal added" });
+    },
+  });
+
+  const handleSearch = () => {
+    if (!startDate || !endDate) return;
+
+    try {
+      const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+      // Get all entries in date range for this goal
+      const filtered = entries.filter((entry: JournalEntry) => {
+        if (!entry.date || entry.goalId !== goal.id.toString()) return false;
+        const entryDate = new Date(entry.date);
+        return isWithinInterval(entryDate, {
+          start: startOfDay(startDate),
+          end: endOfDay(endDate)
+        });
+      });
+
+      // For displaying purposes, we still want to set all filtered entries
+      // so users can see all updates in the date range
+      setFilteredEntries(filtered);
+
+      // Display a message about the search results
+      if (filtered.length > 0) {
+        // Sort entries by date to get the most recent one first
+        const sortedEntries = [...filtered].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+        // Let the user know we found entries, but we'll only use the latest one for output
+        toast({ 
+          title: "Search Complete", 
+          description: `Found ${filtered.length} entries between the selected dates. The latest update will be used for the PDF.` 
+        });
+      } else {
+        toast({ 
+          title: "No Results", 
+          description: "No entries found for this goal in the selected date range." 
+        });
+      }
+    } catch (error) {
+      console.error('Error searching entries:', error);
+      setFilteredEntries([]);
+      toast({
+        title: "Error",
+        description: "Could not perform the search. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (startDate) {
+      localStorage.setItem(`filter_start_${goal.id}`, startDate.toISOString());
+    }
+    if (endDate) {
+      localStorage.setItem(`filter_end_${goal.id}`, endDate.toISOString());
+    }
+  }, [startDate, endDate, goal.id]);
+
+  const IMAGE_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA+0lEQVR4nO2UMQ6CMBiFf40ncOIKOjp6CeNBPIJ6A93UwcWDeBJWnZxMdDQYtgYICRKG9xpaaEopYHDxJV8C6Xv/17wWvWvyAEPIBXRDVgDnqkCEbCTwB1QmQSWwEWCH0ArEj8DTwnaCnxZvJGgR+AkQXPgKsHxO/FXKS6AswTcgQg4SPLEniwWkTXQk4SJnMBjEc2AtFc8FtFSNteTpE/uIppL8gbopbgrHshGHhK8A9Ym4gBoJLmS5JGcr2USHySglePyM6BzASK5WUeV7JhqrQvQl9U9TXAj08Q+QB84SsKPlqiVY5vLJpYDOxHFX4krL/IPegKg7qc1zrebellQAAAABJRU5ErkJggg==";
+
+  return (
+    <div className={`${level > 0 ? 'ml-4' : ''} w-full`}>
+      <Card className={`bg-card card-hover glow-effect ${level === 0 ? 'min-h-[280px]' : 'min-h-[180px]'} flex flex-col w-full relative overflow-hidden`}>
+        {/* Decorative card accent border */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
+
+        <CardHeader className="py-3 px-4 flex-shrink-0 border-b">
+          <div className="flex flex-col w-full">
+            <div className="flex justify-between items-center w-full">
+              <div
+                className="flex items-center gap-2 cursor-pointer flex-1 group"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {hasSubGoals ? (
+                  <div className="flex items-center transition-transform duration-300 ease-in-out">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                    )}
+                    {isExpanded ? (
+                      <FolderOpen className="h-5 w-5 text-yellow-500 ml-1 transition-all group-hover:text-yellow-600 group-hover:scale-110" />
+                    ) : (
+                      <Folder className="h-5 w-5 text-yellow-500 ml-1 transition-all group-hover:text-yellow-600 group-hover:scale-110" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-9" /> // Spacer for alignment
+                )}
+                <div>
+                  <CardTitle className={`text-base font-medium truncate transition-colors duration-300 group-hover:text-primary ${hasSubGoals ? 'text-primary' : ''} card-title`}>
+                    {goal.title}
+                  </CardTitle>
+                  {goal.description && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPreview(true);
+                      }}
+                      className="text-sm text-muted-foreground mt-1 flex items-center hover:text-primary transition-colors duration-300 group-hover:text-primary/80 card-content"
+                    >
+                      <FileText className="h-4 w-4 mr-1 transition-transform group-hover:scale-110" />
+                      <span className="line-clamp-1">{goal.description.slice(0, 50)}{goal.description.length > 50 ? '...' : ''}</span>
+                    </button>
+                  )}
+                </div>
+                {hasSubGoals && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-2 transition-all group-hover:bg-primary/20">
+                    {subGoals.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-1 shrink-0 items-center ml-auto">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(true);
+                    setShowAddSub(true);
+                  }}
+                  title="Add Sub-Goal"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <Plus className="h-4 w-4 text-primary" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditing(true);
+                  }}
+                  title="Edit"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <EditIcon className="h-4 w-4 text-amber-500" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this goal?')) {
+                      deleteMutation.mutate();
+                    }
+                  }}
+                  title="Delete"
+                  className="h-8 w-8 rounded-full icon-pulse btn-hover-effect"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive/70 hover:text-destructive" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-3 pb-2 overflow-y-auto flex-grow border-t mt-2 card-content">
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="relative">
+              <Popover open={showStartCalendar} onOpenChange={setShowStartCalendar}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    {startDate ? format(startDate, 'MMM d, yyyy') : 'Start Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0"
+                  side="bottom"
+                  align="start"
+                  collisionPadding={16}
+                  avoidCollisions={true}
+                  style={{
+                    maxHeight: '70vh',
+                    overflowY: 'auto'
+                  }}
+                >
+                  <Calendar
+                    value={startDate}
+                    onChange={(date) => {
+                      setStartDate(date as Date);
+                      setShowStartCalendar(false);
+                    }}
+                    className={`border-0 ${theme === 'dark' ? 'dark' : ''}`}
+                    minDetail="month"
+                    view="month"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="relative">
+              <Popover open={showEndCalendar} onOpenChange={setShowEndCalendar}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    {endDate ? format(endDate, 'MMM d, yyyy') : 'End Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0" 
+                  align="center"
+                  side="bottom"
+                  sideOffset={5}
+                  alignOffset={0}
+                  avoidCollisions={true}
+                >
+                  <Calendar
+                    value={endDate}
+                    onChange={(date) => {
+                      setEndDate(date as Date);
+                      setShowEndCalendar(false);
+                    }}
+                    className={`border-0 ${theme === 'dark' ? 'dark' : ''}`}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <Button
+              variant="default"
+              onClick={handleSearch}
+              disabled={!startDate || !endDate}
+              className="btn-hover-effect relative overflow-hidden"
+            >
+              <Search className="h-4 w-4 mr-1" />
+              Search
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  // Initialize PDF with better compatibility options and memory handling
+                  const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true,
+                    putOnlyUsedFonts: true,
+                    floatPrecision: 16
+                  });
+
+                  // Set initial document properties
+                  doc.setFontSize(16);
+                  doc.setFont('helvetica', 'bold');
+                  const title = goal.title || 'Goal Report';
+                  doc.text(title, 20, 20);
+
+                  doc.setFontSize(12);
+                  doc.setFont('helvetica', 'normal');
+                  let yPosition = 40;
+                  const pageHeight = doc.internal.pageSize.height;
+                  const margin = 20;
+
+                  // Get entries from localStorage - filtered by current date range if available
+                  const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+                  const goalEntries = startDate && endDate 
+                    ? entries.filter(entry => {
+                        if (!entry.date || entry.goalId !== goal.id.toString()) return false;
+                        const entryDate = new Date(entry.date);
+                        return isWithinInterval(entryDate, {
+                          start: startOfDay(startDate),
+                          end: endOfDay(endDate)
+                        });
+                      })
+                    : entries.filter(entry => entry.goalId === goal.id.toString());
+
+                  // Skip the basic text entries as we'll process them properly below with media
+                  if (goalEntries.length === 0) {
+                    doc.text("No entries found for this goal.", margin, yPosition);
+                  }
+
+                  // Get only the latest content for this goal in the date range
+                  if (filteredEntries.length > 0) {
+                    // Sort entries by date (newest first)
+                    const sortedEntries = [...filteredEntries].sort((a, b) => 
+                      new Date(b.date).getTime() - new Date(a.date).getTime()
+                    );
+
+                    // Get the latest entry for the goal
+                    const latestEntry = sortedEntries[0];
+
+                    // Display the latest entry
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text("Latest Content:", margin, yPosition);
+                    yPosition += 10;
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(12);
+
+                    const date = format(new Date(latestEntry.date), 'MMMM d, yyyy');
+                    doc.text(`Last Updated: ${date}`, margin, yPosition);
+                    yPosition += 10;
+
+                    // Process the entry text to find and extract images
+                    // Use DOMPurify to safely handle HTML content
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = DOMPurify.sanitize(latestEntry.text);
+
+                    // Define the media handling function for both images and documents
+                    const handleMediaElement = async (
+                      element: HTMLElement,
+                      position: { y: number }
+                    ) => {
+                      const isImage = element.hasAttribute('data-type') 
+                        ? element.getAttribute('data-type') === 'image'
+                        : element.tagName.toLowerCase() === 'img';
+                      let url = element.getAttribute('data-url') || element.getAttribute('src') || element.getAttribute('href');
+                      let title = element.getAttribute('data-title') || '';
+                      if (!title && url) {
+                        title = decodeURIComponent(url.split('/').pop() || '');
+                      }
+                      const size = element.getAttribute('data-size');
+                      const dateDiv = element.querySelector('.text-xs.text-gray-400');
+                      const date = dateDiv ? dateDiv.textContent : '';
+
+                      // Consistent sizing with TranscriptionDownloader
+                      const ICON_SIZE = isImage ? 30 : 15;
+                      const TEXT_OFFSET = isImage ? 35 : 20;
+
+                      // Ensure URL is absolute for PDF compatibility
+                      if (url && !url.startsWith('http')) {
+                        url = new URL(url, window.location.origin).href;
+                      }
+
+                      // For debugging
+                      console.log('Processing media element:', {
+                        isImage,
+                        url,
+                        title,
+                        size
+                      });
+
+                      // Define static icons
+                      const IMAGE_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA+0lEQVR4nO2UMQ6CMBiFf40ncOIKOjp6CeNBPIJ6A93UwcWDeBJWnZxMdDQYtgYICRKG9xpaaEopYHDxJV8C6Xv/17wWvWvyAEPIBXRDVgDnqkCEbCTwB1QmQSWwEWCH0ArEj8DTwnaCnxZvJGgR+AkQXPgKsHxO/FXKS6AswTcgQg4SPLEniwWkTXQk4SJnMBjEc2AtFc8FtFSNteTpE/uIppL8gbopbgrHshGHhK8A9Ym4gBoJLmS5JGcr2USHySglePyM6BzASK5WUeV7JhqrQvQl9U9TXAj08Q+QB84SsKPlqiVY5vLJpYDOxHFX4krL/IPegKg7qc1zrebellQAAAABJRU5ErkJggg==";
+                      const DOC_ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAA5ElEQVR4nO2UQQ6CMBBFf40ncOIKOjrqJYwH4QjqDXRTBxcP4klYdXIy0dFgoKVpSAgJQ/8YoKWUAQYXX/KShmbe79Aw0L96cgAeQCKiG7AGXFMFQmAnwTugNAksgYsEP4BGJH4GnhK0EfiyeCNBe+AkQXPgKsHRO/FXKS6AswTcgRA4SPLYniwSkTXQk4SJHP+jiGbAVEQzEU0keVcldwE6SXSW4B3QmoiHspHEIppL8Ku4Kx7IRh4SvAPWJuIAqCW5kuShnK9lEh8koJHj8jOgcwEiuVlHleyYaq0L0JfVPU1wI9PEPkAfOErCj5aokWObyya+7qc1zrebellQAAAABJRU5ErkJggg==";
+
+                      try {
+                        if (isImage && url) {
+                          // Create thumbnail for the image
+                          const thumbnail = await createThumbnail(url, 100, 100);
+                          
+                          // Add image to PDF
+                          doc.addImage(thumbnail, 'JPEG', margin, position.y, ICON_SIZE, ICON_SIZE);
+                          
+                          // Make the image clickable with absolute URL
+                          doc.link(margin, position.y, ICON_SIZE, ICON_SIZE, { url });
+                          
+                          // Add preview text for image with visual indicators
+                          doc.setFontSize(8);
+                          doc.setFont('helvetica', 'italic');
+                          doc.setTextColor(0, 0, 255); // Blue for clickable text
+                          doc.text("🔗 Click to preview", margin, position.y + ICON_SIZE + 5);
+                          
+                          // Add underline for link text
+                          doc.setLineWidth(0.1);
+                          doc.line(margin, position.y + ICON_SIZE + 6, margin + doc.getTextWidth("🔗 Click to preview"), position.y + ICON_SIZE + 6);
+                          
+                          doc.setTextColor(0, 0, 0); // Reset text color
+                        } else if (url) {
+                          // Add document icon
+                          doc.addImage(DOC_ICON, 'PNG', margin, position.y, ICON_SIZE, ICON_SIZE);
+                          
+                          // Make the document icon clickable
+                          doc.link(margin, position.y, ICON_SIZE, ICON_SIZE, { url });
+                          
+                          // Add preview text for document with visual indicators
+                          doc.setFontSize(8);
+                          doc.setFont('helvetica', 'italic');
+                          doc.setTextColor(0, 0, 255); // Blue for clickable text
+                          doc.text("🔗 Click to open", margin, position.y + ICON_SIZE + 5);
+                          
+                          // Add underline for link text
+                          doc.setLineWidth(0.1);
+                          doc.line(margin, position.y + ICON_SIZE + 6, margin + doc.getTextWidth("🔗 Click to open"), position.y + ICON_SIZE + 6);
+                          
+                          doc.setTextColor(0, 0, 0); // Reset text color
+                        }
+                      } catch (error) {
+                        console.error('Error processing media:', error);
+                        // Add fallback icon
+                        const fallbackIcon = isImage ? IMAGE_ICON : DOC_ICON;
+                        doc.addImage(fallbackIcon, 'PNG', margin, position.y, ICON_SIZE, ICON_SIZE);
+                        
+                        // Add error message
+                        doc.setTextColor(255, 0, 0);
+                        doc.setFontSize(8);
+                        doc.text(`[ERROR: Media could not be loaded]`, margin, position.y + ICON_SIZE + 5);
+                        doc.setTextColor(0, 0, 0);
+                      }
+
+                      // Add clickable title with visual indicators
+                      doc.setFontSize(10);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setTextColor(0, 0, 255);
+                      doc.text(title, margin + TEXT_OFFSET, position.y + (ICON_SIZE/2), {
+                        baseline: 'middle'
+                      });
+                      
+                      // Make title text clickable - using a wider area for better click target
+                      if (url) {
+                        const titleWidth = doc.getTextWidth(title);
+                        doc.link(margin + TEXT_OFFSET - 2, position.y - 2, titleWidth + 4, ICON_SIZE + 4, { url });
+                        
+                        // Add underline for better visibility of clickable area
+                        doc.setLineWidth(0.1);
+                        doc.line(margin + TEXT_OFFSET, position.y + (ICON_SIZE/2) + 2, margin + TEXT_OFFSET + titleWidth, position.y + (ICON_SIZE/2) + 2);
+                      }
+                      
+                      doc.setTextColor(0, 0, 0);
+
+                      // Add size information
+                      if (size) {
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'italic');
+                        const sizeText = `${Math.round(parseInt(size) / 1024)} KB`;
+                        doc.text(sizeText, margin + TEXT_OFFSET, position.y + ICON_SIZE - 2);
+                      }
+
+                      // Add date if available
+                      if (date) {
+                        doc.setFontSize(8);
+                        doc.setFont('helvetica', 'italic');
+                        doc.text(date, margin + TEXT_OFFSET, position.y + ICON_SIZE + 3);
+                      }
+                      
+                      // Update position for next element
+                      position.y += ICON_SIZE + 15;
+                      
+                      // Check if we need a new page
+                      if (position.y > pageHeight - 30) {
+                        doc.addPage();
+                        position.y = 20;
+                      }
+                    };
+
+                    // Process each paragraph or element
+                    const processEntry = async () => {
+                      // Process text content with formatting
+                      let currentY = yPosition;
+                      
+                      // First, collect all media elements to process them properly
+                      const mediaElements = Array.from(tempDiv.querySelectorAll('.media-preview-container, .media-preview-link, span[data-preview], img, a[href$=".pdf"], a[href$=".txt"], a[href$=".docx"]'));
+                      
+                      console.log(`Found ${mediaElements.length} media elements to process`);
+                      
+                      // Process media elements first
+                      for (const element of mediaElements) {
+                        if (element instanceof HTMLElement) {
+                          await handleMediaElement(element, { y: currentY });
+                          currentY += 10; // Add some spacing after each media element
+                        }
+                      }
+                      
+                      // Then find and separate text nodes and inline styled elements (excluding already processed media)
+                      const contentNodes = Array.from(tempDiv.childNodes).filter(
+                        node => node.nodeType === Node.TEXT_NODE || 
+                              (node instanceof HTMLElement && 
+                                !node.matches('img, span[data-preview], [data-type="image"], [data-type="document"], .media-preview-container, .media-preview-link')
+                              )
+                      );
+                      
+                      // Process each node to preserve formatting
+                      for (const node of contentNodes) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                          // Plain text node
+                          const text = node.textContent?.trim() || '';
+                          if (text) {
+                            const lines = doc.splitTextToSize(text, 170) as string[];
+                            for (const line of lines) {
+                              if (line.trim() === '') continue;
+                              
+                              if (currentY > pageHeight - 20) {
+                                doc.addPage();
+                                currentY = 20;
+                              }
+                              
+                              // Default style for plain text
+                              doc.setTextColor(0, 0, 0); // Black
+                              doc.setFont('helvetica', 'normal');
+                              doc.setFontSize(11);
+                              doc.text(line, margin, currentY);
+                              currentY += 7;
+                            }
+                          }
+                        } else if (node instanceof HTMLElement) {
+                          // Styled element (div, span, p, etc.)
+                          const text = node.textContent?.trim() || '';
+                          if (text) {
+                            // Extract styling information
+                            const computedStyle = window.getComputedStyle(node);
+                            const styleColor = node.style.color || computedStyle.color || '';
+                            const styleBg = node.style.backgroundColor || computedStyle.backgroundColor || '';
+                            const fontWeight = computedStyle.fontWeight;
+                            const isItalic = computedStyle.fontStyle === 'italic';
+                            const fontSize = parseInt(computedStyle.fontSize) || 11;
+                            const textAlign = node.style.textAlign || computedStyle.textAlign || 'left';
+                            
+                            // Convert RGB colors to hex for PDF
+                            const getRgbColor = (color: string) => {
+                              const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                              if (rgbMatch) {
+                                const [_, r, g, b] = rgbMatch.map(Number);
+                                return {r, g, b};
+                              }
+                              return {r: 0, g: 0, b: 0}; // Default black
+                            };
+                            
+                            // Apply text styling
+                            if (styleColor && styleColor !== 'rgb(0, 0, 0)') {
+                              const {r, g, b} = getRgbColor(styleColor);
+                              doc.setTextColor(r, g, b);
+                            } else {
+                              doc.setTextColor(0, 0, 0); // Default black
+                            }
+                            
+                            // Set font style based on weight and italic
+                            let fontStyle = 'normal';
+                            if (fontWeight === 'bold' || parseInt(fontWeight) >= 600) {
+                              fontStyle = isItalic ? 'bolditalic' : 'bold';
+                            } else if (isItalic) {
+                              fontStyle = 'italic';
+                            }
+                            doc.setFont('helvetica', fontStyle as any);
+                            
+                            // Adjust font size (scale down for PDF)
+                            doc.setFontSize(Math.min(fontSize, 16));
+                            
+                            // Apply alignment
+                            let xPosition = margin;
+                            if (textAlign === 'center') {
+                              xPosition = doc.internal.pageSize.width / 2;
+                            } else if (textAlign === 'right') {
+                              xPosition = doc.internal.pageSize.width - margin;
+                            }
+                            
+                            // Add highlighted background if present
+                            if (styleBg && styleBg !== 'transparent' && styleBg !== 'rgba(0, 0, 0, 0)') {
+                              const {r, g, b} = getRgbColor(styleBg);
+                              const lines = doc.splitTextToSize(text, 170) as string[];
+                              
+                              for (const line of lines) {
+                                if (line.trim() === '') continue;
+                                
+                                if (currentY > pageHeight - 20) {
+                                  doc.addPage();
+                                  currentY = 20;
+                                }
+                                
+                                const textWidth = doc.getTextWidth(line);
+                                const textHeight = 7;
+                                
+                                // Draw a background rectangle
+                                doc.setFillColor(r, g, b);
+                                doc.rect(
+                                  xPosition - 1,
+                                  currentY - textHeight + 2, 
+                                  textWidth + 2, 
+                                  textHeight + 2, 
+                                  'F'
+                                );
+                                
+                                // Draw text over background
+                                doc.text(line, xPosition, currentY, {
+                                  align: textAlign as any
+                                });
+                                currentY += 7;
+                              }
+                            } else {
+                              // Regular text without background
+                              const lines = doc.splitTextToSize(text, 170) as string[];
+                              
+                              for (const line of lines) {
+                                if (line.trim() === '') continue;
+                                
+                                if (currentY > pageHeight - 20) {
+                                  doc.addPage();
+                                  currentY = 20;
+                                }
+                                
+                                doc.text(line, xPosition, currentY, {
+                                  align: textAlign as any
+                                });
+                                currentY += 7;
+                              }
+                            }
+                            
+                            // Reset text color and style after processing
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(11);
+                          }
+                        }
+                      }
+                      
+                      // Update position for next elements
+                      yPosition = currentY;
+
+                      // We've already processed all the content above, so no need to do it again
+                      // This removes the duplication issue in the PDF
+                            
+                            // Get media info
+                            let url = '';
+                            let title = '';
+                            let size = '';
+                            let dateText = '';
+                            
+                            // Extract media details
+                            const titleEl = node.querySelector('.font-medium');
+                            if (titleEl) title = titleEl.textContent || '';
+                            
+                            const metaEl = node.querySelector('.text-xs.text-muted-foreground');
+                            if (metaEl) {
+                              const metaText = metaEl.textContent || '';
+                              // Extract size
+                              const sizeMatch = metaText.match(/(\d+\.?\d*KB)/);
+                              if (sizeMatch) size = sizeMatch[1];
+                              
+                              // Extract date
+                              const dateMatch = metaText.match(/- (.+)$/);
+                              if (dateMatch) dateText = dateMatch[1].trim();
+                            }
+                            
+                            // Get URL
+                            const linkEl = node.querySelector('a');
+                            if (linkEl) {
+                              // For link elements, we need to ensure we get the full URL
+                              // Using href directly might give a relative path in some cases
+                              url = linkEl.getAttribute('href') || '';
+                              // Convert to absolute URL for PDF compatibility
+                              if (url && !url.startsWith('http')) {
+                                url = new URL(url, window.location.origin).href;
+                              }
+                            }
+                            
+                            const imgEl = node.querySelector('img');
+                            if (imgEl && imgEl.hasAttribute('src')) {
+                              url = imgEl.getAttribute('src') || '';
+                              // Convert to absolute URL for PDF compatibility
+                              if (url && !url.startsWith('http')) {
+                                url = new URL(url, window.location.origin).href;
+                              }
+                            }
+                            
+                            // Ensure we set the data-url attribute for consistent handling
+                            if (url && node instanceof HTMLElement) {
+                              node.setAttribute('data-url', url);
+                            }
+                            
+                            // Create proper emoji indicator
+                            const typeEmoji = isImage ? '🖼️' : '📄';
+                            
+                            // Add some space before media
+                            currentY += 5;
+                            
+                            // Format media with proper emoji and metadata
+                            const displayTitle = title ? `${typeEmoji} ${title}` : (isImage ? '🖼️ Image' : '📄 Document');
+                            
+                            // Check if we need a page break for this media
+                            const mediaHeight = isImage ? 100 : 30;
+                            if (currentY + mediaHeight > pageHeight - 20) {
+                              doc.addPage();
+                              currentY = 20;
+                            }
+                            
+                            // Add media title with visual clickable indicator
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(11);
+                            doc.setTextColor(0, 0, 255); // Blue color for clickable title
+                            doc.text(displayTitle, margin, currentY);
+                            
+                            // Make title text clickable
+                            if (url) {
+                              const titleWidth = doc.getTextWidth(displayTitle);
+                              doc.link(margin - 2, currentY - 10, titleWidth + 4, 12, { url });
+                              
+                              // Add underline for title
+                              doc.setLineWidth(0.1);
+                              doc.line(margin, currentY + 1, margin + titleWidth, currentY + 1);
+                            }
+                            
+                            doc.setTextColor(0, 0, 0); // Reset text color
+                            currentY += 6;
+                            
+                            // Add metadata (size and date)
+                            if (size || dateText) {
+                              doc.setFont('helvetica', 'italic');
+                              doc.setFontSize(8);
+                              doc.setTextColor(100, 100, 100);
+                              let metaLine = '';
+                              if (size) metaLine += size;
+                              if (dateText) metaLine += metaLine ? ` - ${dateText}` : dateText;
+                              doc.text(metaLine, margin, currentY);
+                              currentY += 5;
+                            }
+                            
+                            if (isImage && url) {
+                              try {
+                                // Add image thumbnail
+                                const imgWidth = 90;
+                                const imgHeight = 60;
+                                
+                                // Create and add thumbnail
+                                const thumbnail = await createThumbnail(url, imgWidth, imgHeight);
+                                doc.addImage(thumbnail, 'JPEG', margin, currentY, imgWidth, imgHeight);
+                                
+                                // Make image clickable - using absolute URL
+                                doc.link(margin, currentY, imgWidth, imgHeight, { url });
+                                
+                                // Set PDF properties for better viewer compatibility
+                                doc.setProperties({
+                                  title: "Goal Report with Clickable Media",
+                                  subject: "Interactive PDF with clickable media elements",
+                                  creator: "Requires Adobe Acrobat or Chrome PDF viewer",
+                                });
+                                
+                                // Add visual indicators for clickable content
+                                currentY += imgHeight + 5;
+                                doc.setFontSize(8);
+                                doc.setFont('helvetica', 'italic');
+                                doc.setTextColor(0, 0, 255); // Blue for clickable text
+                                const clickText = "🔗 Click image to view full version";
+                                doc.text(clickText, margin, currentY);
+                                
+                                // Add underline for better visibility
+                                doc.setLineWidth(0.1);
+                                doc.line(margin, currentY + 1, margin + doc.getTextWidth(clickText), currentY + 1);
+                                
+                                doc.setTextColor(0, 0, 0); // Reset text color
+                                
+                                currentY += 10;
+                              } catch (error) {
+                                console.error('Error adding image to PDF:', error);
+                                doc.setFont('helvetica', 'italic');
+                                doc.setFontSize(10);
+                                doc.setTextColor(255, 0, 0);
+                                doc.text(`[ERROR: Image preview failed]`, margin, currentY);
+                                doc.setTextColor(0, 0, 0);
+                                currentY += 8;
+                                
+                                // Still provide a clickable link even if image fails
+                                if (url) {
+                                  doc.setTextColor(0, 0, 255);
+                                  const clickText = "🔗 Click here to view image";
+                                  doc.text(clickText, margin, currentY);
+                                  doc.link(margin, currentY - 8, doc.getTextWidth(clickText), 10, { url });
+                                  
+                                  // Add underline
+                                  doc.setLineWidth(0.1);
+                                  doc.line(margin, currentY + 1, margin + doc.getTextWidth(clickText), currentY + 1);
+                                  
+                                  doc.setTextColor(0, 0, 0);
+                                  currentY += 10;
+                                }
+                              }
+                            } else if (isDocument && url) {
+                              // Add document icon and link
+                              // Use larger icon size for better visibility and clickability
+                              const docIconSize = 20; 
+                              doc.addImage(DOC_ICON, 'PNG', margin, currentY, docIconSize, docIconSize);
+                              
+                              // Make icon clickable with proper URL
+                              if (url) {
+                                // Ensure URL is absolute for PDF compatibility
+                                const absoluteUrl = url.startsWith('http') ? url : new URL(url, window.location.origin).href;
+                                doc.link(margin, currentY, docIconSize, docIconSize, { url: absoluteUrl });
+                              }
+                              
+                              // Add clickable document title
+                              doc.setFont('helvetica', 'bold');
+                              doc.setFontSize(10);
+                              doc.setTextColor(0, 0, 255);
+                              const docTitle = title || 'Document';
+                              doc.text(docTitle, margin + 20, currentY + 5);
+                              
+                              // Make title clickable with a larger click area
+                              const titleWidth = doc.getTextWidth(docTitle);
+                              if (url) {
+                                // Ensure URL is absolute for PDF compatibility (same as for icon)
+                                const absoluteUrl = url.startsWith('http') ? url : new URL(url, window.location.origin).href;
+                                doc.link(margin + 20 - 2, currentY, titleWidth + 4, 15, { url: absoluteUrl });
+                              }
+                              
+                              // Add underline for title
+                              doc.setLineWidth(0.1);
+                              doc.line(margin + 20, currentY + 7, margin + 20 + titleWidth, currentY + 7);
+                              
+                              // Add "Click to open" text with visual indicator
+                              doc.setFontSize(8);
+                              doc.setFont('helvetica', 'italic');
+                              const clickText = "🔗 Click to open document";
+                              doc.text(clickText, margin + 20, currentY + 15);
+                              
+                              // Make "Click to open" text also clickable for better UX
+                              if (url) {
+                                const absoluteUrl = url.startsWith('http') ? url : new URL(url, window.location.origin).href;
+                                doc.link(margin + 20 - 2, currentY + 8, doc.getTextWidth(clickText) + 4, 10, { url: absoluteUrl });
+                              }
+                              
+                              // Add underline
+                              doc.setLineWidth(0.1);
+                              doc.line(margin + 20, currentY + 16, margin + 20 + doc.getTextWidth(clickText), currentY + 16);
+                              
+                              doc.setTextColor(0, 0, 0);
+                              currentY += 25;
+                            } else {
+                              // Fallback for documents without URL
+                              doc.setFont('helvetica', 'italic');
+                              doc.setFontSize(10);
+                              doc.setTextColor(100, 100, 100);
+                              doc.text(`[${isImage ? 'Image' : 'Document'}: ${title || 'Untitled'} - No preview available]`, margin, currentY);
+                              doc.setTextColor(0, 0, 0);
+                              currentY += 8;
+                            }
+                            
+                            // Add some space after media
+                            currentY += 5;
+                          } else {
+                            // Regular HTML element - extract text with formatting
+                            const textContent = node.textContent?.trim();
+                            if (textContent) {
+                              // Determine element type and apply appropriate styling
+                              let fontSize = 11;
+                              let fontStyle = 'normal';
+                              
+                              if (node.tagName.match(/^H[1-6]$/i)) {
+                                // Heading - size based on level
+                                const level = parseInt(node.tagName.charAt(1));
+                                fontSize = 18 - (level * 1.5);
+                                fontStyle = 'bold';
+                              } else if (node.tagName === 'STRONG' || node.tagName === 'B') {
+                                fontStyle = 'bold';
+                              } else if (node.tagName === 'EM' || node.tagName === 'I') {
+                                fontStyle = 'italic';
+                              } else if (node.tagName === 'U') {
+                                // Underline not directly supported, use italic instead
+                                fontStyle = 'italic';
+                              }
+                              
+                              // Set formatting
+                              doc.setFont('helvetica', fontStyle);
+                              doc.setFontSize(fontSize);
+                              doc.setTextColor(0, 0, 0);
+                              
+                              // Add the text with line breaks
+                              const lines = doc.splitTextToSize(textContent, 170);
+                              for (const line of lines) {
+                                if (currentY > pageHeight - 15) {
+                                  doc.addPage();
+                                  currentY = 20;
+                                }
+                                doc.text(line, margin, currentY);
+                                currentY += 7;
+                              }
+                              
+                              // Add spacing after paragraphs
+                              if (node.tagName === 'P' || node.tagName.match(/^H[1-6]$/i)) {
+                                currentY += 5;
+                              }
+                            }
+                          }
+                        }
+                      }
+                      
+                      // Update yPosition for next content
+                      yPosition = currentY;
+
+                      // Reset font
+                      doc.setFontSize(12);
+                      doc.setFont('helvetica', 'normal');
+                    };
+
+                    await processEntry();
+                    yPosition += 15;
+                  }
+
+                  // Include sub-goals in the date range if available
+                  if (subGoals && subGoals.length > 0) {
+                    if (yPosition > pageHeight - 40) {
+                      doc.addPage();
+                      yPosition = 20;
+                    }
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text("Sub-Goals:", margin, yPosition);
+                    yPosition += 10;
+
+                    // For each sub-goal, get the latest content in date range
+                    // Use for...of instead of forEach for async/await support
+                    for (const subGoal of subGoals) {
+                      if (yPosition > pageHeight - 30) {
+                        doc.addPage();
+                        yPosition = 20;
+                      }
+
+                      // Title of the sub-goal
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(12);
+                      doc.text(subGoal.title, margin, yPosition);
+                      yPosition += 7;
+
+                      // Get entries for this sub-goal
+                      try {
+                        const entries: JournalEntry[] = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+                        const subGoalEntries = entries.filter((entry: JournalEntry) => {
+                          if (!entry.date || entry.goalId !== subGoal.id.toString()) return false;
+                          const entryDate = new Date(entry.date);
+                          return startDate && endDate && isWithinInterval(entryDate, {
+                            start: startOfDay(startDate),
+                            end: endOfDay(endDate)
+                          });
+                        });
+
+                        if (subGoalEntries.length > 0) {
+                          // Sort entries by date (newest first)
+                          const sortedEntries = [...subGoalEntries].sort((a, b) => 
+                            new Date(b.date).getTime() - new Date(a.date).getTime()
+                          );
+
+                          // Get the latest entry for the sub-goal
+                          const latestSubGoalEntry = sortedEntries[0];
+
+                          doc.setFont('helvetica', 'normal');
+                          doc.setFontSize(10);
+                          const date = format(new Date(latestSubGoalEntry.date), 'MMMM d, yyyy');
+                          doc.text(`Last Updated: ${date}`, margin + 5, yPosition);
+                          yPosition += 5;
+
+                          // Process the sub-goal entry to extract images
+                          const subGoalTempDiv = document.createElement('div');
+                          subGoalTempDiv.innerHTML = DOMPurify.sanitize(latestSubGoalEntry.text);
+
+                          // Process text content with formatting preserving styling
+                          let currentY = yPosition;
+                          
+                          // Process each node to preserve formatting (similar to main goal processing)
+                          const contentNodes = Array.from(subGoalTempDiv.childNodes).filter(
+                            node => node.nodeType === Node.TEXT_NODE || 
+                                  (node instanceof HTMLElement && 
+                                    !node.matches('img, span[data-preview], [data-type="image"], [data-type="document"]')
+                                  )
+                          );
+                          
+                          for (const node of contentNodes) {
+                            if (node.nodeType === Node.TEXT_NODE) {
+                              // Plain text node
+                              const text = node.textContent?.trim() || '';
+                              if (text) {
+                                const lines = doc.splitTextToSize(text, 160) as string[];
+                                for (const line of lines) {
+                                  if (line.trim() === '') continue;
+                                  
+                                  if (currentY > pageHeight - 20) {
+                                    doc.addPage();
+                                    currentY = 20;
+                                  }
+                                  
+                                  // Default style for plain text
+                                  doc.setTextColor(0, 0, 0); // Black
+                                  doc.setFont('helvetica', 'normal');
+                                  doc.setFontSize(10);
+                                  doc.text(line, margin + 5, currentY);
+                                  currentY += 6;
+                                }
+                              }
+                            } else if (node instanceof HTMLElement) {
+                              // Styled element (div, span, p, etc.)
+                              const text = node.textContent?.trim() || '';
+                              if (text) {
+                                // Extract styling information
+                                const computedStyle = window.getComputedStyle(node);
+                                const styleColor = node.style.color || computedStyle.color || '';
+                                const styleBg = node.style.backgroundColor || computedStyle.backgroundColor || '';
+                                const fontWeight = computedStyle.fontWeight;
+                                const isItalic = computedStyle.fontStyle === 'italic';
+                                const fontSize = parseInt(computedStyle.fontSize) || 10;
+                                const textAlign = node.style.textAlign || computedStyle.textAlign || 'left';
+                                
+                                // Get color values for PDF
+                                const getRgbColor = (color: string) => {
+                                  const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                                  if (rgbMatch) {
+                                    const [_, r, g, b] = rgbMatch.map(Number);
+                                    return {r, g, b};
+                                  }
+                                  return {r: 0, g: 0, b: 0}; // Default black
+                                };
+                                
+                                // Apply text styling
+                                if (styleColor && styleColor !== 'rgb(0, 0, 0)') {
+                                  const {r, g, b} = getRgbColor(styleColor);
+                                  doc.setTextColor(r, g, b);
+                                } else {
+                                  doc.setTextColor(0, 0, 0); // Default black
+                                }
+                                
+                                // Set font style based on weight and italic
+                                let fontStyle = 'normal';
+                                if (fontWeight === 'bold' || parseInt(fontWeight) >= 600) {
+                                  fontStyle = isItalic ? 'bolditalic' : 'bold';
+                                } else if (isItalic) {
+                                  fontStyle = 'italic';
+                                }
+                                doc.setFont('helvetica', fontStyle as any);
+                                
+                                // Adjust font size (scale down for PDF)
+                                doc.setFontSize(Math.min(fontSize, 14));
+                                
+                                // Apply alignment (adjusted for subgoals which are already indented)
+                                let xPosition = margin + 5;
+                                if (textAlign === 'center') {
+                                  xPosition = doc.internal.pageSize.width / 2;
+                                } else if (textAlign === 'right') {
+                                  xPosition = doc.internal.pageSize.width - margin - 5;
+                                }
+                                
+                                // Add highlighted background if present
+                                if (styleBg && styleBg !== 'transparent' && styleBg !== 'rgba(0, 0, 0, 0)') {
+                                  const {r, g, b} = getRgbColor(styleBg);
+                                  const lines = doc.splitTextToSize(text, 160) as string[];
+                                  
+                                  for (const line of lines) {
+                                    if (line.trim() === '') continue;
+                                    
+                                    if (currentY > pageHeight - 20) {
+                                      doc.addPage();
+                                      currentY = 20;
+                                    }
+                                    
+                                    const textWidth = doc.getTextWidth(line);
+                                    const textHeight = 6;
+                                    
+                                    // Draw a background rectangle
+                                    doc.setFillColor(r, g, b);
+                                    doc.rect(
+                                      xPosition - 1,
+                                      currentY - textHeight + 2, 
+                                      textWidth + 2, 
+                                      textHeight + 2, 
+                                      'F'
+                                    );
+                                    
+                                    // Draw text over background
+                                    doc.text(line, xPosition, currentY, {
+                                      align: textAlign as any
+                                    });
+                                    currentY += 6;
+                                  }
+                                } else {
+                                  // Regular text without background
+                                  const lines = doc.splitTextToSize(text, 160) as string[];
+                                  
+                                  for (const line of lines) {
+                                    if (line.trim() === '') continue;
+                                    
+                                    if (currentY > pageHeight - 20) {
+                                      doc.addPage();
+                                      currentY = 20;
+                                    }
+                                    
+                                    doc.text(line, xPosition, currentY, {
+                                      align: textAlign as any
+                                    });
+                                    currentY += 6;
+                                  }
+                                }
+                                
+                                // Reset text color and style after processing
+                                doc.setTextColor(0, 0, 0);
+                                doc.setFont('helvetica', 'normal');
+                                doc.setFontSize(10);
+                              }
+                            }
+                          }
+                          
+                          // Update position for next elements
+                          yPosition = currentY;
+
+                          // Process images and documents using the improved approach
+                          const subGoalMediaElements = Array.from(subGoalTempDiv.querySelectorAll('img, span[data-preview], [data-type="image"], [data-type="document"]'));
+
+                          if (subGoalMediaElements.length > 0) {
+                            yPosition += 10; // Space before media section
+                            
+                            // Group media by type for better organization in subgoals
+                            const subGoalImages = subGoalMediaElements.filter(el => 
+                              (el instanceof HTMLElement) && 
+                              ((el.getAttribute('data-type') === 'image') || el.tagName.toLowerCase() === 'img')
+                            );
+                            
+                            const subGoalDocuments = subGoalMediaElements.filter(el => 
+                              (el instanceof HTMLElement) && 
+                              (el.getAttribute('data-type') === 'document')
+                            );
+                            
+                            // Process images first with better styling for subgoals
+                            if (subGoalImages.length > 0) {
+                              doc.setFontSize(11);
+                              doc.setFont('helvetica', 'bold');
+                              doc.text("Images:", margin + 5, yPosition);
+                              yPosition += 8;
+                              
+                              for (const element of subGoalImages) {
+                                if (element instanceof HTMLElement) {
+                                  try {
+                                    const img = element.querySelector('img') || (element.tagName.toLowerCase() === 'img' ? element : null);
+                                    let imgSrc = img && 'src' in img ? (img as HTMLImageElement).src : element.getAttribute('data-url');
+                                    
+                                    if (imgSrc) {
+                                      // Ensure URL is absolute
+                                      if (!imgSrc.startsWith('http')) {
+                                        imgSrc = window.location.origin + (imgSrc.startsWith('/') ? '' : '/') + imgSrc;
+                                      }
+                                      
+                                      // Check if we need a new page for the image
+                                      if (yPosition > pageHeight - 80) {
+                                        doc.addPage();
+                                        yPosition = 20;
+                                      }
+                                      
+                                      // Use dimensions adjusted for subgoals
+                                      const imgWidth = 70;  
+                                      const imgHeight = 55;
+                                      
+                                      // Add image title with better formatting
+                                      const imgTitle = element.getAttribute('data-title') || 'Image';
+                                      doc.setFontSize(10);
+                                      doc.setFont('helvetica', 'bold');
+                                      doc.text(imgTitle, margin + 8, yPosition);
+                                      yPosition += 5;
+                                      
+                                      // Add timestamp if available
+                                      const dateDiv = element.querySelector('.text-xs.text-gray-400');
+                                      if (dateDiv) {
+                                        doc.setFontSize(8);
+                                        doc.setFont('helvetica', 'italic');
+                                        doc.text(dateDiv.textContent || '', margin + 8, yPosition);
+                                        yPosition += 4;
+                                      }
+                                      
+                                      // Create and add thumbnail with better quality
+                                      const thumbnail = await createThumbnail(imgSrc, imgWidth, imgHeight);
+                                      doc.addImage(thumbnail, 'JPEG', margin + 8, yPosition, imgWidth, imgHeight);
+                                      
+                                      // Add a clickable area over the image that opens the full version
+                                      doc.link(margin + 8, yPosition, imgWidth, imgHeight, { url: imgSrc });
+                                      
+                                      // Add "Click to view full image" text
+                                      yPosition += imgHeight + 5;
+                                      doc.setFontSize(8);
+                                      doc.setFont('helvetica', 'italic');
+                                      doc.setTextColor(0, 0, 255);
+                                      doc.text("(Click image to view full version)", margin + 8, yPosition);
+                                      doc.setTextColor(0, 0, 0);
+                                      
+                                      yPosition += 12; // Space after each image
+                                    }
+                                  } catch (error) {
+                                    console.error('Error adding subgoal image to PDF:', error);
+                                    
+                                    // Add a fallback for failed images
+                                    doc.setFont('helvetica', 'italic');
+                                    doc.setFontSize(10);
+                                    const imgTitle = element.getAttribute('data-title') || 'Image';
+                                    doc.text(`[Image: ${imgTitle} - Failed to load]`, margin + 8, yPosition);
+                                    yPosition += 8;
+                                  }
+                                }
+                              }
+                            }
+                            
+                            // Process documents with improved preview for subgoals
+                            if (subGoalDocuments.length > 0) {
+                              // Add a page break if we're running out of space
+                              if (yPosition > pageHeight - 40) {
+                                doc.addPage();
+                                yPosition = 20;
+                              }
+                              
+                              yPosition += 8;
+                              doc.setFontSize(11);
+                              doc.setFont('helvetica', 'bold');
+                              doc.text("Documents:", margin + 5, yPosition);
+                              yPosition += 8;
+                              
+                              for (const element of subGoalDocuments) {
+                                if (element instanceof HTMLElement) {
+                                  try {
+                                    let docUrl = element.getAttribute('data-url');
+                                    const docTitle = element.getAttribute('data-title') || 'Document';
+                                    const docSize = element.getAttribute('data-size') || '';
+                                    
+                                    if (docUrl) {
+                                      // Ensure URL is absolute
+                                      if (!docUrl.startsWith('http')) {
+                                        docUrl = window.location.origin + (docUrl.startsWith('/') ? '' : '/') + docUrl;
+                                      }
+                                      
+                                      // Calculate space needed
+                                      const itemHeight = 35;
+                                      
+                                      // Check for page break
+                                      if (yPosition > pageHeight - itemHeight) {
+                                        doc.addPage();
+                                        yPosition = 20;
+                                      }
+                                      
+                                      // Add document icon
+                                      doc.addImage(DOC_ICON, 'PNG', margin + 8, yPosition, 15, 15);
+                                      
+                                      // Add document title with link
+                                      doc.setFontSize(10);
+                                      doc.setFont('helvetica', 'bold');
+                                      doc.setTextColor(0, 0, 255);
+                                      doc.text(docTitle, margin + 28, yPosition + 5);
+                                      doc.link(margin + 8, yPosition, doc.getTextWidth(docTitle) + 25, 15, { url: docUrl });
+                                      
+                                      // Add size info
+                                      if (docSize) {
+                                        doc.setFontSize(8);
+                                        doc.setFont('helvetica', 'italic');
+                                        doc.setTextColor(100, 100, 100);
+                                        const sizeText = `${Math.round(parseInt(docSize) / 1024)} KB`;
+                                        doc.text(sizeText, margin + 28, yPosition + 15);
+                                      }
+                                      
+                                      // Add "Click to open" text
+                                      doc.setFontSize(8);
+                                      doc.setTextColor(0, 0, 255);
+                                      doc.text("(Click to open)", margin + 28, yPosition + 20);
+                                      
+                                      // Reset text color
+                                      doc.setTextColor(0, 0, 0);
+                                      yPosition += itemHeight;
+                                    }
+                                  } catch (error) {
+                                    console.error('Error adding subgoal document to PDF:', error);
+                                    // Fallback for failed documents
+                                    doc.setFont('helvetica', 'italic');
+                                    doc.setFontSize(10);
+                                    const docTitle = element.getAttribute('data-title') || 'Document';
+                                    doc.text(`[Document: ${docTitle} - Failed to load]`, margin + 8, yPosition);
+                                    yPosition += 8;
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        } else {
+                          doc.setFont('helvetica', 'italic');
+                          doc.setFontSize(10);
+                          doc.text("No updates in selected date range", margin + 5, yPosition);
+                        }
+                      } catch (error: unknown) {
+                        console.error('Error getting sub-goal entries:', error instanceof Error ? error.message : 'Unknown error');
+                        // Add error message to PDF
+                        doc.setFont('helvetica', 'italic');
+                        doc.setFontSize(10);
+                        doc.setTextColor(255, 0, 0);
+                        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                        doc.text(`Error processing sub-goal: ${errorMsg}`, margin + 5, yPosition);
+                        doc.setTextColor(0, 0, 0);
+                      }
+
+                      // Add spacing between sub-goals
+                      yPosition += 15;
+
+                      // Check if we need a new page for the next sub-goal
+                      if (yPosition > pageHeight - 40) {
+                        doc.addPage();
+                        yPosition = 20;
+                      }
+                    }
+                  }
+
+                  // Save the PDF with the goal title as the filename
+                  doc.save(`${goal.title}-entries.pdf`);
+                } catch (error) {
+                  console.error('Error generating PDF:', error);
+
+                  // Free memory explicitly
+                  try {
+                    gc();
+                  } catch (e) {
+                    console.log('Failed cleanup:', e);
+                  }
+
+                  // Provide more specific and helpful error messages
+                  let errorMessage = "Failed to generate PDF. ";
+                  if (error instanceof Error) {
+                    if (error.message.includes('image') || error.message.includes('addImage')) {
+                      errorMessage += "There was an issue processing images. Try again after selecting a smaller date range or fewer goals.";
+                    } else if (error.message.includes('memory') || error.message.includes('allocation') || error.message.includes('heap')) {
+                      errorMessage += "The document is too large. Please try with a smaller date range or fewer subgoals.";
+                    } else if (error.message.includes('timeout') || error.message.includes('time limit')) {
+                      errorMessage += "The operation timed out. Please try with fewer entries or a smaller date range.";
+                    } else {
+                      errorMessage += "Please try with fewer entries or a smaller date range. Your content may be too large for a single PDF.";
+                    }
+                  }
+
+                  toast({
+                    title: "PDF Generation Error",
+                    description: errorMessage,
+                    variant: "destructive",
+                    duration: 7000
+                  });
+                }
+              }}
+              disabled={filteredEntries.length === 0}
+              className="flex items-center gap-2 btn-hover-effect border-primary/30 hover:bg-primary/5"
+            >
+              <Download className="h-4 w-4 text-primary icon-pulse" />
+              Download PDF
+            </Button>
+          </div>
+
+          {filteredEntries.length > 0 && (
+            <div className="mt-4 max-h-60 overflow-y-auto border rounded-lg p-4">
+              {filteredEntries.map((entry, index) => (
+                <div 
+                  className={`mb-2 pb-2 border-b last:border-b-0 ${
+                    entry.date === searchDate ? 'border-2 border-primary rounded p-2' : ''
+                  }`}
+                >
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(entry.date), 'MMM d, yyyy')}
+                  </div>
+                  <div 
+                    className="mt-1 text-sm" 
+                    dangerouslySetInnerHTML={{ __html: entry.text }} 
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isExpanded && hasSubGoals && (
+            <div className="mt-4 pl-4 space-y-2 border-l-2 border-primary/30">
+              <h4 className="text-sm font-medium text-primary border-b pb-1 flex items-center">
+                <FolderOpen className="h-4 w-4 mr-1" /> Sub-Goals
+              </h4>
+              {subGoals.map((sg) => (
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Goal Dialog */}
+      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Goal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                value={editedGoal.title}
+                onChange={(e) =>
+                  setEditedGoal({ ...editedGoal, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                value={editedGoal.description || ""}
+                onChange={(e) =>
+                  setEditedGoal({
+                    ...editedGoal,
+                    description: e.target.value,
+                  })
+                }
+                rows={5}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditing(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sub-Goal Dialog */}
+      <Dialog open={showAddSub} onOpenChange={setShowAddSub}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Sub-Goal</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Enter sub-goal title"
+                onChange={(e) =>
+                  setEditedGoal({ ...editedGoal, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description (Optional)</label>
+              <Textarea
+                placeholder="Enter sub-goal description"
+                onChange={(e) =>
+                  setEditedGoal({
+                    ...editedGoal,
+                    description: e.target.value,
+                  })
+                }
+                rows={5}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddSub(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => addSubMutation.mutate(editedGoal)}
+              disabled={addSubMutation.isPending || !editedGoal.title?.trim()}
+            >
+              {addSubMutation.isPending ? "Adding..." : "Add Sub-Goal"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>{goal.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[65vh] overflow-y-auto">
+            <div className="prose dark:prose-invert max-w-none">
+              <h3>Description</h3>
+              {goal.description && (
+                <div 
+                  className="text-base"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(formatMediaElements(goal.description))
+                  }}
+                />
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

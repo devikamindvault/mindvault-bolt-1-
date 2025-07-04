@@ -1,0 +1,214 @@
+istration failed",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    try {
+      setLoading(true);
+      console.log("Starting login process...");
+      
+      if (!isConnected) {
+        throw {
+        };
+      }
+      
+      console.log("Login succeeded:", userCredential.user.uid);
+      
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully.",
+      });
+    } catch (error: any) {
+      let message = "Login failed";
+      
+      // Provide user-friendly error messages
+        message = "No account found with this email. Please register first.";
+        message = "Invalid email format. Please check and try again.";
+        message = "Network error - check your internet connection and try again.";
+        console.error("Network error details:", error.customData?.message || "No details available");
+        message = "Server error - please try again later.";
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      console.error("Login error:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
+      console.error("Error details:", error.customData);
+      
+      toast({
+        title: "Login failed",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Login with Google using server-side proxy
+  const googleSignIn = async () => {
+    try {
+      setLoading(true);
+      console.log("Starting Google sign-in process...");
+      
+      if (!isConnected) {
+        throw {
+        };
+      }
+      
+      // This function will redirect and not return
+      await loginWithGoogle();
+      
+      // The code below won't execute due to the redirect, but we'll keep it for reference
+      toast({
+        title: "Redirecting to Google login",
+        description: "You will be redirected to sign in with Google.",
+      });
+    } catch (error: any) {
+      // Improved error handling based on the specific error code
+      
+      if (error.code) {
+        switch (error.code) {
+            message = "Network error - check your connection";
+            break;
+            message = "Internal error - please try again later";
+            break;
+          default:
+        }
+      } else {
+      }
+      
+      console.error("Google sign-in error:", error);
+      
+      toast({
+        title: "Google login failed",
+        description: message,
+        variant: "destructive",
+      });
+      
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout
+  const logout = async () => {
+    try {
+      setLoading(true);
+      await logoutUser();
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    try {
+      setLoading(true);
+      toast({
+      });
+    } catch (error: any) {
+      
+      // Provide user-friendly error messages
+        message = "No account found with this email address.";
+        message = "The email address is not valid. Please check and try again.";
+        message = "Too many requests. Please try again later.";
+        message = "Network error - check your internet connection and try again.";
+        message = "Server error - please try again later.";
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      
+      toast({
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify reset code
+  const verifyResetCode = async (code: string) => {
+    try {
+    } catch (error: any) {
+      let message = "Verification failed";
+      
+      // Provide user-friendly error messages
+        message = "This user account has been disabled. Please contact support.";
+        message = "User not found. The account may have been deleted.";
+        message = "Network error - check your internet connection and try again.";
+        message = "Server error - please try again later.";
+      } else if (error.message) {
+        message = error.message;
+      }
+      
+      console.error("Verification error:", error);
+      
+      toast({
+        title: "Verification Failed",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+
+    mutationFn: async ({
+    }: {
+    }) => {
+      try {
+      } catch (error: any) {
+        
+        // Provide user-friendly error messages
+          message = "This user account has been disabled. Please contact support.";
+          message = "User not found. The account may have been deleted.";
+          message = "Network error - check your internet connection and try again.";
+          message = "Server error - please try again later.";
+        } else if (error.message) {
+          message = error.message;
+        }
+        
+        throw new Error(message);
+      }
+    },
+  });
+
+    currentUser,
+    loading,
+    register,
+    login,
+    loginWithGoogle: googleSignIn,
+    logout,
+    verifyResetCode
+  };
+
+  return (
+      {children}
+  );
+};
+
+  if (!context) {
+  }
+  return context;
+};
