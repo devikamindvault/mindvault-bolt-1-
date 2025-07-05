@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -30,6 +32,7 @@ export const users = pgTable("users", {
 
 // Defining the goals table structure
 export const goals = pgTable("goals", {
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
   active: boolean("active").default(true),
@@ -163,6 +166,7 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   category: true,
 });
 
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).pick({
   userId: true,
   expiresAt: true,
 });
@@ -187,3 +191,5 @@ export type Transcription = typeof transcriptions.$inferSelect;
 export type InsertTranscription = z.infer<typeof insertTranscriptionSchema>;
 export type Quote = typeof quotes.$inferSelect;
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
