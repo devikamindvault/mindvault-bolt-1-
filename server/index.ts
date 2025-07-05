@@ -78,8 +78,6 @@ export async function createApp() {
   app.set("trust proxy", 1);
   
   // Add session validation middleware
-  }
-  
   // Unified session configuration
   app.use(
     session({
@@ -120,12 +118,12 @@ export async function createApp() {
     }
   });
   
-  });
-  
-  
   // Middleware to catch CSRF errors and provide better error messages
   app.use((err: any, req: any, res: any, next: any) => {
+    if (err.code === 'EBADCSRFTOKEN') {
       return res.status(403).json({ 
+        message: 'Invalid CSRF token',
+        error: 'CSRF token validation failed'
       });
     }
     next(err);
@@ -164,6 +162,7 @@ export async function createApp() {
   });
 
   // API Routes
+  app.get("/api/goals", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const goals = await db.query.goals.findMany({
@@ -176,6 +175,8 @@ export async function createApp() {
     }
   });
 
+  app.post("/api/goals", async (req: any, res) => {
+    const { title, description, parentId, order } = req.body;
     try {
       const userId = req.user.id;
       
@@ -221,6 +222,7 @@ export async function createApp() {
     }
   });
 
+  app.put("/api/goals/:id", async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -232,6 +234,7 @@ export async function createApp() {
       });
       
       if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
       }
       
       const result = await db
@@ -246,6 +249,7 @@ export async function createApp() {
     }
   });
 
+  app.delete("/api/goals/:id", async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -256,6 +260,7 @@ export async function createApp() {
       });
       
       if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
       }
 
       const deleteRelatedData = async (goalId: number) => {
@@ -363,6 +368,7 @@ export async function createApp() {
     }
   });
 
+  app.get("/api/transcriptions", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const transcriptions = await db.query.transcriptions.findMany({
@@ -376,6 +382,7 @@ export async function createApp() {
     }
   });
 
+  app.post("/api/transcriptions", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { content, goalId } = req.body;
@@ -440,6 +447,7 @@ export async function createApp() {
     }
   });
 
+  app.delete("/api/transcriptions/:id", async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
@@ -450,6 +458,7 @@ export async function createApp() {
       });
       
       if (!transcription) {
+        return res.status(404).json({ message: "Transcription not found" });
       }
       
       await db.delete(schema.transcriptions).where(sql`id = ${id}`);
@@ -461,6 +470,7 @@ export async function createApp() {
   });
 
   // Add user activity endpoints for tracking engagement
+  app.get("/api/user-activity", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const activities = await db.query.userActivity.findMany({
@@ -474,6 +484,7 @@ export async function createApp() {
     }
   });
 
+  app.post("/api/user-activity", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { activityType, details } = req.body;
@@ -491,6 +502,7 @@ export async function createApp() {
   });
 
   // Project tracking endpoints for analysis
+  app.get("/api/project-tracking", async (req: any, res) => {
     try {
       const userId = req.user.id;
       let tracking;
@@ -520,6 +532,7 @@ export async function createApp() {
     }
   });
 
+  app.post("/api/project-tracking", async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { goalId, totalTime, sessionsCount, dateGrouping } = req.body;
@@ -610,6 +623,7 @@ export async function createApp() {
   });
 
   // File upload route
+  app.post("/api/upload", upload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -638,6 +652,7 @@ export async function createApp() {
   });
 
   // Get all files
+  app.get("/api/files", (_req, res) => {
     fs.readdir(uploadDir, (err, files) => {
       if (err) {
         return res.status(500).json({ message: "Error reading files", error: err.message });
@@ -655,6 +670,7 @@ export async function createApp() {
   });
   
   // Quote Routes
+  app.get("/api/quotes", async (_req, res) => {
     try {
       const quotes = await db.query.quotes.findMany();
       res.json(quotes);
@@ -690,6 +706,8 @@ export async function createApp() {
     }
   });
 
+  app.post("/api/quotes", async (req: any, res) => {
+    const { text, category } = req.body;
     try {
       const result = await db.insert(schema.quotes).values({
         text,
