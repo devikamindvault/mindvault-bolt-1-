@@ -191,5 +191,3 @@ export type Transcription = typeof transcriptions.$inferSelect;
 export type InsertTranscription = z.infer<typeof insertTranscriptionSchema>;
 export type Quote = typeof quotes.$inferSelect;
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
