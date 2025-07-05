@@ -1,9 +1,6 @@
 import { MailService } from '@sendgrid/mail';
 
-}
-
 const mailService = new MailService();
-}
 
 const FROM_EMAIL = 'info@mindvault.app';
 const APP_NAME = 'MindVault';
@@ -20,6 +17,8 @@ interface EmailParams {
  */
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
+    if (!params.text && !params.html) {
+      console.error('Either text or html content must be provided');
       return false;
     }
 
