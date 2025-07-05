@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-// Import SendGrid email service
 import bcrypt from 'bcryptjs';
 import { 
   insertGoalSchema, 
@@ -245,93 +244,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'error',
         message: 'Server status check failed',
         error: error.message
-      });
-    }
-  });
-  
-  app.post("/api/forgot-password", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ 
-          success: false,
-          message: 'Email is required' 
-        });
-      }
-      
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        return res.status(404).json({ 
-          success: false,
-          message: 'No account found with this email address' 
-        });
-      }
-      
-      const emailSent = await sendPasswordResetEmail(
-        email,
-        user.username
-      );
-      
-      if (!emailSent) {
-        return res.status(500).json({
-          success: false,
-        });
-      }
-      
-      res.status(200).json({
-        success: true,
-      });
-    } catch (error) {
-      res.status(500).json({ 
-        success: false,
-      });
-    }
-  });
-  
-  app.post("/api/reset-password", async (req, res) => {
-    try {
-      if (!req.body) {
-        return res.status(400).json({
-          success: false,
-        });
-      }
-      
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-        });
-      }
-      
-      if (!token) {
-        return res.status(400).json({
-          success: false,
-        });
-      }
-      
-      if (!newPassword) {
-        return res.status(400).json({
-          success: false,
-        });
-      }
-      
-      const bcrypt = require('bcryptjs');
-      const saltRounds = 10;
-      
-      await storage.updateUser(user.id, {
-        updatedAt: new Date()
-      });
-      
-      res.status(200).json({
-        success: true,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
       });
     }
   });

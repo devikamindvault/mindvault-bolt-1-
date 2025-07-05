@@ -22,14 +22,6 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
 });
 
-export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  expiresAt: timestamp("expires_at").notNull(),
-  used: boolean("used").default(false),
-});
-
 // Defining the goals table structure
 export const goals = pgTable("goals", {
   id: serial("id").primaryKey(),
@@ -164,11 +156,6 @@ export const insertTranscriptionSchema = createInsertSchema(transcriptions).pick
 export const insertQuoteSchema = createInsertSchema(quotes).pick({
   text: true,
   category: true,
-});
-
-export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).pick({
-  userId: true,
-  expiresAt: true,
 });
 
 // Subscription schema for updates

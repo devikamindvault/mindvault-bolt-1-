@@ -140,43 +140,4 @@ export const sessionStore = new PostgresSessionStore({
     
   });
 
-    try {
-      const { email } = req.body;
-      
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
-      
-      // If no user found with this email, still return success to prevent email enumeration
-      if (!user) {
-      }
-      
-      
-      try {
-          email,
-          user.username
-        );
-        
-        if (emailSent) {
-        } else {
-        }
-      } catch (emailError) {
-        // Don't expose error details to the client
-      }
-      
-      // Return success regardless of whether email was sent to prevent email enumeration
-    } catch (error) {
-    }
-  });
-
-    try {
-      
-      
-      }
-      
-      
-      
-      
-    } catch (error) {
-    }
-  });
 }

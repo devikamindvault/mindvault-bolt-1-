@@ -20,8 +20,6 @@ import { and, eq, gte, lte, desc, sql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
-import { randomBytes } from "crypto";
-import { addHours } from "date-fns";
 
 const MemoryStore = createMemoryStore(session);
 const PgStore = connectPgSimple(session);
@@ -64,8 +62,6 @@ export interface IStorage {
   getQuoteById(id: number): Promise<Quote>;
   getDailyQuote(): Promise<Quote>;
   createQuote(quote: InsertQuote): Promise<Quote>;
-  
-  // Session store
   sessionStore: session.Store;
 }
 
@@ -583,26 +579,6 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     
     return quote;
-  }
-
-    
-    // Set expiration to 24 hours from now
-    const expiresAt = addHours(new Date(), 24);
-    
-      userId,
-      expiresAt,
-      used: false
-    }).returning();
-    
-  }
-  
-    });
-    
-  }
-  
-      .set({ used: true })
-      .returning();
-      
   }
 }
 
