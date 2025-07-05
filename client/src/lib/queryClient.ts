@@ -1,144 +1,67 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    let errorMessage;
-    try {
-      // Try to parse as JSON first
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const errorJson = await res.clone().json();
-        console.error(`API Error JSON:`, errorJson);
-        errorMessage = JSON.stringify(errorJson);
-      } else {
-        errorMessage = await res.text();
-      }
-    } catch (e) {
-      // If JSON parsing fails, fall back to text
-      errorMessage = await res.text() || res.statusText;
-    }
-    
-    console.error(`API Error: ${res.status}: ${errorMessage} for ${res.url}`);
-    
-    // Create a custom error object with response details
-    const error: any = new Error(`${res.status}: ${errorMessage}`);
-    error.status = res.status;
-    error.response = {
-      url: res.url,
-      status: res.status,
-      statusText: res.statusText,
-      data: errorMessage
-    };
-    throw error;
-  }
-}
-
-export async function apiRequest<T = any>(
-  urlOrOptions: string | { url: string; method?: string; body?: any; headers?: Record<string, string> },
-  options?: RequestInit
-): Promise<T> {
-  let url: string;
-  let method: string = 'GET';
-  let body: any = undefined;
-  let headers: Record<string, string> = {};
-  
-  // Handle different parameter formats
-  if (typeof urlOrOptions === 'string') {
-    url = urlOrOptions;
-    method = options?.method || 'GET';
-    body = options?.body;
-    headers = options?.headers || {};
-  } else {
-    url = urlOrOptions.url;
-    method = urlOrOptions.method || 'GET';
-    body = urlOrOptions.body;
-    headers = urlOrOptions.headers || {};
-  }
-  
-  console.log(`Making API ${method} request to ${url}`, body || '');
-  
+export async function apiRequest(
+  method: string,
+  url: string,
+  body?: any
+): Promise<Response> {
   try {
-    // If Content-Type is not set and there's a body, default to JSON
-    if (body && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
+    // For static app, we'll just simulate API calls
+    if (url === '/api/quotes/daily') {
+      // Simulate a daily quote API
+      const quotes = [
+        { id: 1, text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+        { id: 2, text: "Innovation distinguishes between a leader and a follower.", author: "Steve Jobs" },
+        { id: 3, text: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
+        { id: 4, text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+        { id: 5, text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" }
+      ];
+      
+      // Get a consistent quote based on the day
+      const today = new Date();
+      const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+      const quoteIndex = dateSeed % quotes.length;
+      
+      // Create a mock response
+      const mockResponse = new Response(
+        JSON.stringify(quotes[quoteIndex]),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+      
+      return mockResponse;
     }
     
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body && headers['Content-Type'] === 'application/json' ? JSON.stringify(body) : body,
-      credentials: "include",
-    });
-
-    if (res.status === 401) {
-      // We're using server-side cookies now, so remove any localStorage data
-      if (localStorage.getItem('sessionUser')) {
-        console.log('Removing outdated user data from localStorage due to 401');
-        localStorage.removeItem('sessionUser');
+    // For other endpoints, return empty arrays
+    if (url.includes('/api/goals') || url.includes('/api/transcriptions')) {
+      return new Response(
+        JSON.stringify([]),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // Default response for other API calls
+    return new Response(
+      JSON.stringify({ message: "Static app - no real API calls" }),
+      { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' }
       }
-    }
-
-    await throwIfResNotOk(res);
-    console.log(`API ${method} request to ${url} succeeded`);
-    
-    // Check if response is empty
-    const contentLength = res.headers.get('Content-Length');
-    if (contentLength === '0' || res.status === 204) {
-      return {} as T; // Return empty object for no-content responses
-    }
-    
-    // Try to parse as JSON, fall back to text if not JSON
-    const contentType = res.headers.get('Content-Type');
-    if (contentType && contentType.includes('application/json')) {
-      return await res.json() as T;
-    } else {
-      const text = await res.text();
-      try {
-        return JSON.parse(text) as T;
-      } catch (e) {
-        return text as unknown as T;
-      }
-    }
+    );
   } catch (error) {
     console.error(`API ${method} request to ${url} failed:`, error);
     throw error;
   }
 }
 
-export const getQueryFn: <T>(options: {
-}) => QueryFunction<T> =
-    
-    try {
-        credentials: "include",
-      });
-
-      if (res.status === 401) {
-        // We're using server-side cookies now, so remove any localStorage data
-        if (localStorage.getItem('sessionUser')) {
-          console.log('Removing outdated user data from localStorage due to 401');
-          localStorage.removeItem('sessionUser');
-        }
-        
-        // You need to be logged in to access this data
-          console.log('Returning null due to 401');
-          return null;
-        }
-      }
-
-      await throwIfResNotOk(res);
-      const data = await res.json();
-      return data;
-    } catch (error) {
-        return null;
-      }
-      throw error;
-    }
-  };
-
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "returnNull" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
