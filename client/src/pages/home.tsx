@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, Target, BarChart3, Home as HomeIcon, User, Settings } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mic, Target, BarChart3, Home as HomeIcon, User, Settings, Save, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Quote {
   id: number;
@@ -13,8 +14,18 @@ interface Quote {
   author: string;
 }
 
+interface Goal {
+  id: number;
+  title: string;
+  description?: string;
+  content?: string;
+}
+
 export default function Home() {
   const [currentText, setCurrentText] = useState("");
+  const [selectedGoalId, setSelectedGoalId] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch daily quote
   const { data: quote } = useQuery<Quote>({
@@ -25,24 +36,82 @@ export default function Home() {
     }
   });
 
+  // Fetch goals for dropdown
+  const { data: goals = [] } = useQuery<Goal[]>({
+    queryKey: ['goals'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/goals");
+      return response.json();
+    }
+  });
+
+  // Save content mutation
+  const saveContentMutation = useMutation({
+    mutationFn: async ({ goalId, content }: { goalId: string; content: string }) => {
+      return apiRequest("PATCH", `/api/goals/${goalId}`, { content });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Content saved!",
+        description: "Your content has been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save content. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Load goal content when goal is selected
+  useEffect(() => {
+    if (selectedGoalId) {
+      const selectedGoal = goals.find(goal => goal.id.toString() === selectedGoalId);
+      if (selectedGoal) {
+        setCurrentText(selectedGoal.content || "");
+      }
+    } else {
+      setCurrentText("");
+    }
+  }, [selectedGoalId, goals]);
+
+  const handleSave = () => {
+    if (!selectedGoalId) {
+      toast({
+        title: "No goal selected",
+        description: "Please select a goal before saving content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveContentMutation.mutate({
+      goalId: selectedGoalId,
+      content: currentText,
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-[#1a1a3e]">
+    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex flex-col">
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
+        <div className="container flex h-16 items-center px-6">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Mic className="h-6 w-6" />
-              <span className="hidden font-bold sm:inline-block">
+              <Mic className="h-6 w-6 text-primary" />
+              <span className="hidden font-bold sm:inline-block text-xl">
                 MindVault
               </span>
             </Link>
             <nav className="flex items-center space-x-6 text-sm font-medium">
-              <Link href="/" className="transition-colors hover:text-foreground/80 text-foreground flex items-center gap-1">
+              <Link href="/" className="transition-colors hover:text-foreground/80 text-foreground flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10">
                 <HomeIcon className="h-4 w-4" />
                 Home
               </Link>
-              <Link href="/goals" className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center gap-1">
+              <Link href="/goals" className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent">
                 <Target className="h-4 w-4" />
                 Goals
               </Link>
@@ -52,7 +121,7 @@ export default function Home() {
             <div className="w-full flex-1 md:w-auto md:flex-none">
               <nav className="flex items-center md:hidden">
                 <Link href="/" className="mr-6 flex items-center space-x-2">
-                  <Mic className="h-6 w-6" />
+                  <Mic className="h-6 w-6 text-primary" />
                   <span className="font-bold">MindVault</span>
                 </Link>
               </nav>
@@ -66,80 +135,109 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="h-full">
-        <div className="relative bg-background/95 rounded-lg shadow-lg p-4 m-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
-          <div className="editor-content transition-all duration-300 relative">
-            <div className="flex flex-col gap-3 mb-4 p-4 bg-card rounded-lg border border-border">
-              <div className="flex items-center gap-1">
-                <div className="w-full">
-                  <div className="quote-of-the-day p-3 bg-muted/30 rounded-lg shadow-sm border border-border">
-                    <h3 className="text-lg font-medium text-primary mb-2">Quote of the Day</h3>
-                    <p className="text-md italic text-foreground/90 mb-2">{quote?.text || "The only way to do great work is to love what you do."}</p>
-                    <p className="text-sm text-muted-foreground">— {quote?.author || "Steve Jobs"}</p>
-                  </div>
-                </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Quote of the Day Section */}
+        <div className="bg-card border-b px-6 py-4">
+          <div className="container mx-auto">
+            <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-primary mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Quote of the Day
+                </h3>
+                <blockquote className="text-lg italic text-foreground/90 mb-3">
+                  "{quote?.text || "The only way to do great work is to love what you do."}"
+                </blockquote>
+                <cite className="text-sm text-muted-foreground">
+                  — {quote?.author || "Steve Jobs"}
+                </cite>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Editor Section */}
+        <div className="flex-1 flex flex-col px-6 py-6">
+          <div className="container mx-auto flex-1 flex flex-col">
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Select Goal:</label>
+                <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="Choose a goal to work on" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {goals.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id.toString()}>
+                        {goal.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Link href="/goals">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create New Goal
+                </Button>
+              </Link>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="default"
+                  onClick={handleSave}
+                  disabled={!selectedGoalId || saveContentMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {saveContentMutation.isPending ? "Saving..." : "Save Content"}
+                </Button>
               </div>
             </div>
-            <Tabs defaultValue="record">
-              <TabsList>
-                <TabsTrigger value="record">Record</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-              </TabsList>
 
-              <TabsContent value="record" className="relative">
-                <div className="space-y-3 p-3 rounded-lg shadow-sm border border-border bg-card/80 relative overflow-hidden bg-pattern w-full">
-                  <div className="flex flex-wrap items-center gap-3 justify-between relative z-10">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Button variant="outline">
-                        Select Goal
-                      </Button>
-                      <Button
-                        variant="default"
-                        className="flex items-center gap-2 relative overflow-hidden"
-                      >
-                        <Mic className="h-5 w-5" />
-                        Start Recording
-                      </Button>
-                    </div>
-                    <Button variant="ghost" size="icon" className="rounded-full w-8 h-8">
-                      <Settings className="h-5 w-5" />
-                    </Button>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="relative">
-                      <div
-                        className="w-full min-h-[250px] p-4 border border-border rounded-lg bg-muted/30 text-foreground transition-colors duration-300 focus:outline-none shadow-sm"
-                        contentEditable
-                        onInput={(e) => setCurrentText(e.currentTarget.textContent || "")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end mt-4">
-                    <Button 
-                      variant="default"
-                      className="relative overflow-hidden flex items-center"
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
+            {/* Text Editor */}
+            <Card className="flex-1 flex flex-col">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Mic className="h-5 w-5 text-primary" />
+                  {selectedGoalId 
+                    ? `Working on: ${goals.find(g => g.id.toString() === selectedGoalId)?.title || 'Selected Goal'}`
+                    : "Select a goal to start writing"
+                  }
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col p-0">
+                <div className="flex-1 relative">
+                  <textarea
+                    value={currentText}
+                    onChange={(e) => setCurrentText(e.target.value)}
+                    placeholder={selectedGoalId 
+                      ? "Start writing your thoughts, ideas, and progress for this goal..."
+                      : "Please select a goal from the dropdown above to begin writing..."
+                    }
+                    className="w-full h-full min-h-[500px] p-6 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground"
+                    disabled={!selectedGoalId}
+                  />
                 </div>
-              </TabsContent>
+              </CardContent>
+            </Card>
 
-              <TabsContent value="history">
-                <div className="container mx-auto py-6 px-4 space-y-4">
-                  <div className="text-center py-12">
-                    <div className="text-muted-foreground mb-4">
-                      No activities found yet. Record your first voice note!
-                    </div>
-                    <Button>
-                      Start Recording
-                    </Button>
-                  </div>
+            {/* Status Bar */}
+            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4">
+                <span>Characters: {currentText.length}</span>
+                <span>Words: {currentText.trim() ? currentText.trim().split(/\s+/).length : 0}</span>
+              </div>
+              {selectedGoalId && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>Goal selected: {goals.find(g => g.id.toString() === selectedGoalId)?.title}</span>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </div>
         </div>
       </div>

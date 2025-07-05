@@ -6,6 +6,31 @@ export async function apiRequest(
   body?: any
 ): Promise<Response> {
   try {
+    // Mock goals data for demonstration
+    const mockGoals = [
+      { 
+        id: 1, 
+        title: "Learn React Development", 
+        description: "Master React hooks, components, and state management",
+        content: "Today I learned about useState and useEffect hooks...",
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 2, 
+        title: "Daily Exercise Routine", 
+        description: "Maintain a consistent workout schedule",
+        content: "",
+        createdAt: new Date().toISOString()
+      },
+      { 
+        id: 3, 
+        title: "Read 12 Books This Year", 
+        description: "Expand knowledge through regular reading",
+        content: "Currently reading 'The Pragmatic Programmer'...",
+        createdAt: new Date().toISOString()
+      }
+    ];
+
     // For static app, we'll just simulate API calls
     if (url === '/api/quotes/daily') {
       // Simulate a daily quote API
@@ -34,8 +59,59 @@ export async function apiRequest(
       return mockResponse;
     }
     
+    // Handle goals endpoints
+    if (url === '/api/goals' && method === 'GET') {
+      return new Response(
+        JSON.stringify(mockGoals),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    if (url === '/api/goals' && method === 'POST') {
+      // Simulate creating a new goal
+      const newGoal = {
+        id: Date.now(),
+        ...body,
+        content: "",
+        createdAt: new Date().toISOString()
+      };
+      
+      return new Response(
+        JSON.stringify(newGoal),
+        { 
+          status: 201, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    if (url.includes('/api/goals/') && method === 'PATCH') {
+      // Simulate updating a goal
+      return new Response(
+        JSON.stringify({ success: true }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    if (url.includes('/api/goals/') && method === 'DELETE') {
+      // Simulate deleting a goal
+      return new Response(
+        JSON.stringify({ success: true }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     // For other endpoints, return empty arrays
-    if (url.includes('/api/goals') || url.includes('/api/transcriptions')) {
+    if (url.includes('/api/transcriptions')) {
       return new Response(
         JSON.stringify([]),
         { 
