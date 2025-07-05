@@ -61,7 +61,7 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // We'll use the same Express app for our routes
-  
+  app.get("/api/user", async (req, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -79,9 +79,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/register", async (req, res) => {
     try {
       
       // Validate input
+      if (!req.body) {
         return res.status(400).json({ 
           success: false,
         });
@@ -141,9 +143,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/login", async (req, res) => {
     try {
       
       // Validate input
+      if (!req.body) {
         return res.status(400).json({ 
           success: false, 
         });
@@ -157,6 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      if (!user.password) {
         return res.status(401).json({ 
           success: false, 
         });
@@ -244,6 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -264,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      
+      const emailSent = await sendPasswordResetEmail(
         email,
         user.username
       );
@@ -285,24 +291,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.post("/api/reset-password", async (req, res) => {
     try {
-      
+      if (!req.body) {
         return res.status(400).json({
           success: false,
         });
       }
       
+      const user = await storage.getUserByEmail(email);
       
+      if (!user) {
         return res.status(404).json({
           success: false,
         });
       }
       
+      if (!token) {
         return res.status(400).json({
           success: false,
         });
       }
       
+      if (!newPassword) {
         return res.status(400).json({
           success: false,
         });
@@ -311,9 +322,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bcrypt = require('bcryptjs');
       const saltRounds = 10;
       
+      await storage.updateUser(user.id, {
         updatedAt: new Date()
       });
-      
       
       res.status(200).json({
         success: true,
@@ -324,7 +335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
   // Goals Routes
+  app.get("/api/goals", async (req, res) => {
     try {
       // Get user ID directly from the session
       const userId = (req.user as any)?.id;
@@ -381,11 +394,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transcriptions Routes
+  app.get("/api/transcriptions", async (req, res) => {
     try {
       // Get user ID directly from the session
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       let transcriptions = await storage.getUserTranscriptions(userId);
@@ -409,11 +424,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/transcriptions", async (req, res) => {
     try {
       // Get user ID directly from the session
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       let data = insertTranscriptionSchema.parse({
@@ -447,10 +464,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Activities Route
+  app.get("/api/activities", async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       console.log("Fetching user activities for userId:", userId);
@@ -530,10 +549,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // This route was duplicated - removed
 
+  app.post("/api/activities", async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       const data = insertUserActivitySchema.parse({
@@ -553,10 +574,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project Tracking Routes
+  app.get("/api/tracking", async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       console.log("Fetching project tracking for userId:", userId);
@@ -580,10 +603,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/tracking", async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       console.log("Creating project tracking for userId:", userId, "with data:", req.body);
@@ -655,11 +680,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subscription management route
+  app.post("/api/subscription", async (req, res) => {
     try {
       // Get user ID directly from the session
       const userId = (req.user as any)?.id;
       
       if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
       
       const data = subscriptionSchema.parse(req.body);
@@ -675,6 +702,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`User ${userId} subscription updated to: ${data.subscriptionTier}`);
       
       // Remove sensitive data before sending response
+      const userResponse = {
+        id: updatedUser.id,
+        subscriptionTier: updatedUser.subscriptionTier,
+        subscriptionId: updatedUser.subscriptionId
+      };
       
       res.json(userResponse);
     } catch (err) {
