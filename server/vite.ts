@@ -44,11 +44,6 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   // Handle API routes before Vite middleware
-      return next();
-    }
-    vite.middlewares(req, res, next);
-  });
-  
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
