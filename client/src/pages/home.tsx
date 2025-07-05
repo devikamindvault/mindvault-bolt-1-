@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mic, Target, BarChart3, Home as HomeIcon, User, Settings, Save, Plus } from "lucide-react";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { Mic, Target, BarChart3, Home as HomeIcon, User, Settings, Save, Plus, Quote, FileText, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,9 @@ interface Goal {
 export default function Home() {
   const [currentText, setCurrentText] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string>("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -78,6 +82,12 @@ export default function Home() {
     }
   }, [selectedGoalId, goals]);
 
+  // Update word and character count
+  useEffect(() => {
+    setCharCount(currentText.length);
+    setWordCount(currentText.trim() ? currentText.trim().split(/\s+/).length : 0);
+  }, [currentText]);
+
   const handleSave = () => {
     if (!selectedGoalId) {
       toast({
@@ -94,79 +104,100 @@ export default function Home() {
     });
   };
 
+  const handleTranscription = (transcribedText: string) => {
+    if (selectedGoalId) {
+      const newText = currentText ? `${currentText}\n\n${transcribedText}` : transcribedText;
+      setCurrentText(newText);
+    } else {
+      toast({
+        title: "No goal selected",
+        description: "Please select a goal before recording.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const selectedGoal = goals.find(g => g.id.toString() === selectedGoalId);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex flex-col">
-      {/* Main Navigation Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center px-6">
-          <div className="mr-4 hidden md:flex">
-            <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Mic className="h-6 w-6 text-primary" />
-              <span className="hidden font-bold sm:inline-block text-xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
+      {/* Navigation Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 shadow-sm">
+        <div className="container mx-auto flex h-16 items-center justify-between px-6">
+          <div className="flex items-center space-x-8">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                <Mic className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 MindVault
               </span>
             </Link>
-            <nav className="flex items-center space-x-6 text-sm font-medium">
-              <Link href="/" className="transition-colors hover:text-foreground/80 text-foreground flex items-center gap-2 px-3 py-2 rounded-md bg-primary/10">
-                <HomeIcon className="h-4 w-4" />
-                Home
+            
+            <nav className="hidden md:flex items-center space-x-1">
+              <Link href="/">
+                <Button variant="ghost" className="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                  <HomeIcon className="h-4 w-4 mr-2" />
+                  Home
+                </Button>
               </Link>
-              <Link href="/goals" className="transition-colors hover:text-foreground/80 text-muted-foreground flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent">
-                <Target className="h-4 w-4" />
-                Goals
+              <Link href="/goals">
+                <Button variant="ghost" className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400">
+                  <Target className="h-4 w-4 mr-2" />
+                  Goals
+                </Button>
               </Link>
             </nav>
           </div>
-          <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <div className="w-full flex-1 md:w-auto md:flex-none">
-              <nav className="flex items-center md:hidden">
-                <Link href="/" className="mr-6 flex items-center space-x-2">
-                  <Mic className="h-6 w-6 text-primary" />
-                  <span className="font-bold">MindVault</span>
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <User className="h-4 w-4" />
-              </Button>
-            </div>
+          
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Settings className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <User className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Quote of the Day Section */}
-        <div className="bg-card border-b px-6 py-4">
-          <div className="container mx-auto">
-            <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-primary mb-3 flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Quote of the Day
-                </h3>
-                <blockquote className="text-lg italic text-foreground/90 mb-3">
+      <div className="container mx-auto px-6 py-8 space-y-8">
+        {/* Quote of the Day */}
+        <Card className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white border-0 shadow-xl">
+          <CardContent className="p-8">
+            <div className="flex items-start space-x-4">
+              <div className="p-3 bg-white/20 rounded-full">
+                <Quote className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold mb-3">Quote of the Day</h3>
+                <blockquote className="text-lg italic mb-4 leading-relaxed">
                   "{quote?.text || "The only way to do great work is to love what you do."}"
                 </blockquote>
-                <cite className="text-sm text-muted-foreground">
+                <cite className="text-white/80 font-medium">
                   — {quote?.author || "Steve Jobs"}
                 </cite>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Editor Section */}
-        <div className="flex-1 flex flex-col px-6 py-6">
-          <div className="container mx-auto flex-1 flex flex-col">
-            {/* Controls */}
-            <div className="flex flex-wrap items-center gap-4 mb-6">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Select Goal:</label>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Goal Selection */}
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-lg">
+                  <Target className="h-5 w-5 mr-2 text-indigo-600" />
+                  Select Goal
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
-                  <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Choose a goal to work on" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a goal..." />
                   </SelectTrigger>
                   <SelectContent>
                     {goals.map((goal) => (
@@ -176,68 +207,125 @@ export default function Home() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              
-              <Link href="/goals">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create New Goal
-                </Button>
-              </Link>
+                
+                <Link href="/goals" className="block">
+                  <Button variant="outline" className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create New Goal
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-              <div className="flex items-center gap-2 ml-auto">
-                <Button
-                  variant="default"
-                  onClick={handleSave}
-                  disabled={!selectedGoalId || saveContentMutation.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {saveContentMutation.isPending ? "Saving..." : "Save Content"}
-                </Button>
-              </div>
-            </div>
+            {/* Selected Goal Info */}
+            {selectedGoal && (
+              <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center text-lg">
+                    <FileText className="h-5 w-5 mr-2 text-green-600" />
+                    Current Goal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                    {selectedGoal.title}
+                  </h4>
+                  {selectedGoal.description && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                      {selectedGoal.description}
+                    </p>
+                  )}
+                  <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Last updated: {new Date().toLocaleDateString()}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Text Editor */}
-            <Card className="flex-1 flex flex-col">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Mic className="h-5 w-5 text-primary" />
-                  {selectedGoalId 
-                    ? `Working on: ${goals.find(g => g.id.toString() === selectedGoalId)?.title || 'Selected Goal'}`
-                    : "Select a goal to start writing"
-                  }
+            {/* Stats */}
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center text-lg">
+                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                  Writing Stats
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-0">
-                <div className="flex-1 relative">
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Words:</span>
+                  <span className="font-semibold">{wordCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Characters:</span>
+                  <span className="font-semibold">{charCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Status:</span>
+                  <span className={`text-sm font-medium ${selectedGoalId ? 'text-green-600' : 'text-amber-600'}`}>
+                    {selectedGoalId ? 'Ready to write' : 'Select a goal'}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Editor */}
+          <div className="lg:col-span-3">
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-xl h-full">
+              <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-xl">
+                    <Mic className="h-6 w-6 mr-3 text-indigo-600" />
+                    {selectedGoalId 
+                      ? `Writing for: ${selectedGoal?.title}`
+                      : "Voice-Powered Writing Studio"
+                    }
+                  </CardTitle>
+                  
+                  <div className="flex items-center space-x-3">
+                    <VoiceRecorder 
+                      onTranscription={handleTranscription}
+                      isRecording={isRecording}
+                      setIsRecording={setIsRecording}
+                    />
+                    
+                    <Button
+                      onClick={handleSave}
+                      disabled={!selectedGoalId || saveContentMutation.isPending}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {saveContentMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-0 h-full">
+                <div className="relative h-full min-h-[600px]">
                   <textarea
                     value={currentText}
                     onChange={(e) => setCurrentText(e.target.value)}
                     placeholder={selectedGoalId 
-                      ? "Start writing your thoughts, ideas, and progress for this goal..."
-                      : "Please select a goal from the dropdown above to begin writing..."
+                      ? "Start writing your thoughts, ideas, and progress for this goal... You can also use the voice recorder to transcribe your speech!"
+                      : "Please select a goal from the sidebar to begin writing. You can create new goals by clicking 'Create New Goal' or visiting the Goals page."
                     }
-                    className="w-full h-full min-h-[500px] p-6 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground"
+                    className="w-full h-full min-h-[600px] p-8 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-lg leading-relaxed"
                     disabled={!selectedGoalId}
+                    style={{ fontFamily: 'ui-serif, Georgia, Cambria, serif' }}
                   />
+                  
+                  {/* Floating status indicator */}
+                  {isRecording && (
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse">
+                      <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                      <span className="text-sm font-medium">Recording...</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-
-            {/* Status Bar */}
-            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-4">
-                <span>Characters: {currentText.length}</span>
-                <span>Words: {currentText.trim() ? currentText.trim().split(/\s+/).length : 0}</span>
-              </div>
-              {selectedGoalId && (
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span>Goal selected: {goals.find(g => g.id.toString() === selectedGoalId)?.title}</span>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
