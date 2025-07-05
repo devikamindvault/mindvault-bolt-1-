@@ -145,7 +145,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
     margin: 0;
     padding: 0;
     box-sizing: border-box;
