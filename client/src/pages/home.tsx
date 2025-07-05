@@ -120,29 +120,29 @@ export default function Home() {
   const selectedGoal = goals.find(g => g.id.toString() === selectedGoalId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
+    <div className="min-h-screen dark-gradient-bg">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/60 shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-700 bg-slate-900/80 backdrop-blur-md supports-[backdrop-filter]:bg-slate-900/60 shadow-lg">
         <div className="container mx-auto flex h-16 items-center justify-between px-6">
           <div className="flex items-center space-x-8">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl shadow-lg glow-primary">
                 <Mic className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent text-shadow">
                 MindVault
               </span>
             </Link>
             
             <nav className="hidden md:flex items-center space-x-1">
               <Link href="/">
-                <Button variant="ghost" className="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                <Button variant="ghost" className="bg-indigo-900/50 text-indigo-300 hover:bg-indigo-800/50 hover:text-indigo-200">
                   <HomeIcon className="h-4 w-4 mr-2" />
                   Home
                 </Button>
               </Link>
               <Link href="/goals">
-                <Button variant="ghost" className="text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <Button variant="ghost" className="text-slate-300 hover:text-indigo-400 hover:bg-slate-800/50">
                   <Target className="h-4 w-4 mr-2" />
                   Goals
                 </Button>
@@ -151,11 +151,11 @@ export default function Home() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-800/50">
+              <Settings className="h-5 w-5 text-slate-300" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <User className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-800/50">
+              <User className="h-5 w-5 text-slate-300" />
             </Button>
           </div>
         </div>
@@ -163,18 +163,18 @@ export default function Home() {
 
       <div className="container mx-auto px-6 py-8 space-y-8">
         {/* Quote of the Day */}
-        <Card className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white border-0 shadow-xl">
+        <Card className="neon-border dark-card glow-purple">
           <CardContent className="p-8">
             <div className="flex items-start space-x-4">
-              <div className="p-3 bg-white/20 rounded-full">
-                <Quote className="h-6 w-6" />
+              <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full glow-purple">
+                <Quote className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-3">Quote of the Day</h3>
-                <blockquote className="text-lg italic mb-4 leading-relaxed">
+                <h3 className="text-xl font-semibold mb-3 text-slate-100">Quote of the Day</h3>
+                <blockquote className="text-lg italic mb-4 leading-relaxed text-slate-200">
                   "{quote?.text || "The only way to do great work is to love what you do."}"
                 </blockquote>
-                <cite className="text-white/80 font-medium">
+                <cite className="text-slate-400 font-medium">
                   — {quote?.author || "Steve Jobs"}
                 </cite>
               </div>
@@ -187,21 +187,21 @@ export default function Home() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Goal Selection */}
-            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+            <Card className="dark-card">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center text-lg">
-                  <Target className="h-5 w-5 mr-2 text-indigo-600" />
+                <CardTitle className="flex items-center text-lg text-slate-100">
+                  <Target className="h-5 w-5 mr-2 text-indigo-400" />
                   Select Goal
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Select value={selectedGoalId} onValueChange={setSelectedGoalId}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full bg-slate-800 border-slate-600 text-slate-200">
                     <SelectValue placeholder="Choose a goal..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-800 border-slate-600">
                     {goals.map((goal) => (
-                      <SelectItem key={goal.id} value={goal.id.toString()}>
+                      <SelectItem key={goal.id} value={goal.id.toString()} className="text-slate-200 focus:bg-slate-700">
                         {goal.title}
                       </SelectItem>
                     ))}
@@ -209,7 +209,7 @@ export default function Home() {
                 </Select>
                 
                 <Link href="/goals" className="block">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-100">
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Goal
                   </Button>
@@ -219,23 +219,23 @@ export default function Home() {
 
             {/* Selected Goal Info */}
             {selectedGoal && (
-              <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+              <Card className="dark-card">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center text-lg">
-                    <FileText className="h-5 w-5 mr-2 text-green-600" />
+                  <CardTitle className="flex items-center text-lg text-slate-100">
+                    <FileText className="h-5 w-5 mr-2 text-green-400" />
                     Current Goal
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  <h4 className="font-semibold text-slate-100 mb-2">
                     {selectedGoal.title}
                   </h4>
                   {selectedGoal.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                    <p className="text-sm text-slate-400 mb-4">
                       {selectedGoal.description}
                     </p>
                   )}
-                  <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center text-xs text-slate-500">
                     <Clock className="h-3 w-3 mr-1" />
                     Last updated: {new Date().toLocaleDateString()}
                   </div>
@@ -244,25 +244,25 @@ export default function Home() {
             )}
 
             {/* Stats */}
-            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+            <Card className="dark-card">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center text-lg">
-                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                <CardTitle className="flex items-center text-lg text-slate-100">
+                  <BarChart3 className="h-5 w-5 mr-2 text-blue-400" />
                   Writing Stats
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Words:</span>
-                  <span className="font-semibold">{wordCount}</span>
+                  <span className="text-sm text-slate-400">Words:</span>
+                  <span className="font-semibold text-slate-200">{wordCount}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Characters:</span>
-                  <span className="font-semibold">{charCount}</span>
+                  <span className="text-sm text-slate-400">Characters:</span>
+                  <span className="font-semibold text-slate-200">{charCount}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-slate-600 dark:text-slate-400">Status:</span>
-                  <span className={`text-sm font-medium ${selectedGoalId ? 'text-green-600' : 'text-amber-600'}`}>
+                  <span className="text-sm text-slate-400">Status:</span>
+                  <span className={`text-sm font-medium ${selectedGoalId ? 'text-green-400' : 'text-amber-400'}`}>
                     {selectedGoalId ? 'Ready to write' : 'Select a goal'}
                   </span>
                 </div>
@@ -272,11 +272,11 @@ export default function Home() {
 
           {/* Main Editor */}
           <div className="lg:col-span-3">
-            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-xl h-full">
-              <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+            <Card className="dark-card h-full">
+              <CardHeader className="border-b border-slate-700">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center text-xl">
-                    <Mic className="h-6 w-6 mr-3 text-indigo-600" />
+                  <CardTitle className="flex items-center text-xl text-slate-100">
+                    <Mic className="h-6 w-6 mr-3 text-indigo-400" />
                     {selectedGoalId 
                       ? `Writing for: ${selectedGoal?.title}`
                       : "Voice-Powered Writing Studio"
@@ -293,7 +293,7 @@ export default function Home() {
                     <Button
                       onClick={handleSave}
                       disabled={!selectedGoalId || saveContentMutation.isPending}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg glow-primary"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       {saveContentMutation.isPending ? "Saving..." : "Save"}
@@ -311,14 +311,14 @@ export default function Home() {
                       ? "Start writing your thoughts, ideas, and progress for this goal... You can also use the voice recorder to transcribe your speech!"
                       : "Please select a goal from the sidebar to begin writing. You can create new goals by clicking 'Create New Goal' or visiting the Goals page."
                     }
-                    className="w-full h-full min-h-[600px] p-8 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-lg leading-relaxed"
+                    className="w-full h-full min-h-[600px] p-8 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-slate-100 placeholder:text-slate-500 text-lg leading-relaxed"
                     disabled={!selectedGoalId}
                     style={{ fontFamily: 'ui-serif, Georgia, Cambria, serif' }}
                   />
                   
                   {/* Floating status indicator */}
                   {isRecording && (
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse">
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse glow-primary">
                       <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
                       <span className="text-sm font-medium">Recording...</span>
                     </div>
