@@ -108,16 +108,22 @@ export default function Home() {
   };
 
   const handleTranscription = (transcribedText: string) => {
-    if (selectedGoalId) {
-      // Insert transcribed text at the current cursor position or append
-      const newText = currentText ? `${currentText}<br><br>${transcribedText}` : transcribedText;
-      setCurrentText(newText);
-    } else {
+    if (!selectedGoalId) {
       toast({
         title: "No goal selected",
         description: "Please select a goal before recording.",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Properly append transcribed text to the editor content
+    const textToAdd = transcribedText.trim();
+    if (textToAdd) {
+      // Add the transcribed text with proper spacing
+      const separator = currentText.trim() ? ' ' : '';
+      const newText = currentText + separator + textToAdd;
+      setCurrentText(newText);
     }
   };
 

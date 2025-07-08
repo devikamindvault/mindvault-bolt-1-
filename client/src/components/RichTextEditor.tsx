@@ -13,7 +13,9 @@ import {
   Type,
   Download,
   Upload,
-  X
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
@@ -40,6 +42,7 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
   const [fontSize, setFontSize] = useState('16');
   const [fontFamily, setFontFamily] = useState('Georgia');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [showMediaPreview, setShowMediaPreview] = useState(true);
   const { toast } = useToast();
 
   const emojis = [
@@ -93,6 +96,9 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
         reader.readAsDataURL(file);
       }
     });
+    
+    // Reset input
+    event.target.value = '';
   };
 
   const handleDocumentUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +122,9 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       };
       reader.readAsDataURL(file);
     });
+    
+    // Reset input
+    event.target.value = '';
   };
 
   const insertImageAtCursor = (imageUrl: string, imageName: string, mediaId: string) => {
@@ -123,23 +132,30 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       
+      // Create a line break before the media if we're not at the start
+      const br1 = document.createElement('br');
+      range.insertNode(br1);
+      range.setStartAfter(br1);
+      
       // Create container for image with delete button
-      const container = document.createElement('span');
+      const container = document.createElement('div');
       container.className = 'media-preview-container';
       container.style.cssText = `
-        display: inline-block;
+        display: block;
         position: relative;
-        margin: 8px 4px;
+        margin: 12px 0;
         border: 2px solid #374151;
         border-radius: 8px;
         background: #1f2937;
         padding: 8px;
-        max-width: 200px;
+        max-width: 300px;
+        width: fit-content;
       `;
       container.setAttribute('data-media-id', mediaId);
       container.setAttribute('data-type', 'image');
       container.setAttribute('data-url', imageUrl);
       container.setAttribute('data-title', imageName);
+      container.contentEditable = 'false';
 
       // Create thumbnail image
       const img = document.createElement('img');
@@ -148,14 +164,16 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       img.style.cssText = `
         width: 100%;
         height: auto;
-        max-height: 120px;
+        max-height: 200px;
         object-fit: cover;
         border-radius: 4px;
         cursor: pointer;
+        display: block;
       `;
       
       // Add click to preview
-      img.onclick = () => {
+      img.onclick = (e) => {
+        e.stopPropagation();
         const modal = document.createElement('div');
         modal.style.cssText = `
           position: fixed;
@@ -163,12 +181,13 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
           left: 0;
           width: 100%;
           height: 100%;
-          background: rgba(0,0,0,0.8);
+          background: rgba(0,0,0,0.9);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 10000;
           cursor: pointer;
+          animation: fadeIn 0.3s ease;
         `;
         
         const fullImg = document.createElement('img');
@@ -177,6 +196,8 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
           max-width: 90%;
           max-height: 90%;
           object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         `;
         
         modal.appendChild(fullImg);
@@ -190,9 +211,10 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       title.style.cssText = `
         color: #e5e7eb;
         font-size: 12px;
-        margin-top: 4px;
+        margin-top: 8px;
         text-align: center;
         word-break: break-all;
+        font-weight: 500;
       `;
 
       // Create delete button
@@ -202,19 +224,31 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
         position: absolute;
         top: -8px;
         right: -8px;
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         background: #ef4444;
         color: white;
         border: none;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: bold;
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 10;
+        transition: all 0.2s ease;
       `;
+      
+      deleteBtn.onmouseover = () => {
+        deleteBtn.style.background = '#dc2626';
+        deleteBtn.style.transform = 'scale(1.1)';
+      };
+      
+      deleteBtn.onmouseout = () => {
+        deleteBtn.style.background = '#ef4444';
+        deleteBtn.style.transform = 'scale(1)';
+      };
       
       deleteBtn.onclick = (e) => {
         e.stopPropagation();
@@ -227,10 +261,14 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       container.appendChild(title);
       container.appendChild(deleteBtn);
       
-      range.deleteContents();
       range.insertNode(container);
       range.setStartAfter(container);
-      range.setEndAfter(container);
+      
+      // Add a line break after the media
+      const br2 = document.createElement('br');
+      range.insertNode(br2);
+      range.setStartAfter(br2);
+      
       selection.removeAllRanges();
       selection.addRange(range);
       
@@ -243,33 +281,41 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       
+      // Create a line break before the media if we're not at the start
+      const br1 = document.createElement('br');
+      range.insertNode(br1);
+      range.setStartAfter(br1);
+      
       // Create container for document with delete button
-      const container = document.createElement('span');
+      const container = document.createElement('div');
       container.className = 'media-preview-container';
       container.style.cssText = `
-        display: inline-block;
+        display: block;
         position: relative;
-        margin: 8px 4px;
+        margin: 12px 0;
         border: 2px solid #374151;
         border-radius: 8px;
         background: #1f2937;
-        padding: 12px;
-        max-width: 250px;
+        padding: 16px;
+        max-width: 300px;
+        width: fit-content;
         cursor: pointer;
+        transition: all 0.2s ease;
       `;
       container.setAttribute('data-media-id', mediaId);
       container.setAttribute('data-type', 'document');
       container.setAttribute('data-url', documentUrl);
       container.setAttribute('data-title', documentName);
       container.setAttribute('data-size', size.toString());
+      container.contentEditable = 'false';
 
       // Create document icon
       const icon = document.createElement('div');
       icon.innerHTML = '📄';
       icon.style.cssText = `
-        font-size: 24px;
+        font-size: 32px;
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       `;
 
       // Create title
@@ -277,11 +323,12 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       title.textContent = documentName;
       title.style.cssText = `
         color: #e5e7eb;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: bold;
         text-align: center;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
         word-break: break-all;
+        line-height: 1.4;
       `;
 
       // Create size info
@@ -289,8 +336,19 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       sizeInfo.textContent = `${Math.round(size / 1024)} KB`;
       sizeInfo.style.cssText = `
         color: #9ca3af;
-        font-size: 10px;
+        font-size: 12px;
         text-align: center;
+        margin-bottom: 8px;
+      `;
+
+      // Create action text
+      const actionText = document.createElement('div');
+      actionText.textContent = 'Click to download';
+      actionText.style.cssText = `
+        color: #60a5fa;
+        font-size: 11px;
+        text-align: center;
+        font-style: italic;
       `;
 
       // Create delete button
@@ -300,19 +358,31 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
         position: absolute;
         top: -8px;
         right: -8px;
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         background: #ef4444;
         color: white;
         border: none;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: bold;
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 10;
+        transition: all 0.2s ease;
       `;
+      
+      deleteBtn.onmouseover = () => {
+        deleteBtn.style.background = '#dc2626';
+        deleteBtn.style.transform = 'scale(1.1)';
+      };
+      
+      deleteBtn.onmouseout = () => {
+        deleteBtn.style.background = '#ef4444';
+        deleteBtn.style.transform = 'scale(1)';
+      };
       
       deleteBtn.onclick = (e) => {
         e.stopPropagation();
@@ -321,25 +391,59 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
         updateContent();
       };
 
-      // Add click to download
+      // Add hover effect for container
+      container.onmouseover = () => {
+        container.style.borderColor = '#60a5fa';
+        container.style.boxShadow = '0 4px 12px rgba(96, 165, 250, 0.3)';
+      };
+      
+      container.onmouseout = () => {
+        container.style.borderColor = '#374151';
+        container.style.boxShadow = 'none';
+      };
+
+      // Add click to download/preview
       container.onclick = (e) => {
         if (e.target !== deleteBtn) {
-          const link = document.createElement('a');
-          link.href = documentUrl;
-          link.download = documentName;
-          link.click();
+          const fileExtension = documentName.split('.').pop()?.toLowerCase();
+          
+          if (fileExtension === 'pdf') {
+            // For PDF files, try to open in a new tab for preview
+            const newWindow = window.open();
+            if (newWindow) {
+              newWindow.document.write(`
+                <html>
+                  <head><title>${documentName}</title></head>
+                  <body style="margin:0; padding:0;">
+                    <iframe src="${documentUrl}" width="100%" height="100%" style="border:none;"></iframe>
+                  </body>
+                </html>
+              `);
+            }
+          } else {
+            // For other files, download directly
+            const link = document.createElement('a');
+            link.href = documentUrl;
+            link.download = documentName;
+            link.click();
+          }
         }
       };
 
       container.appendChild(icon);
       container.appendChild(title);
       container.appendChild(sizeInfo);
+      container.appendChild(actionText);
       container.appendChild(deleteBtn);
       
-      range.deleteContents();
       range.insertNode(container);
       range.setStartAfter(container);
-      range.setEndAfter(container);
+      
+      // Add a line break after the media
+      const br2 = document.createElement('br');
+      range.insertNode(br2);
+      range.setStartAfter(br2);
+      
       selection.removeAllRanges();
       selection.addRange(range);
       
@@ -361,6 +465,17 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
       updateContent();
     }
     setShowEmojiPicker(false);
+  };
+
+  const toggleMediaVisibility = () => {
+    setShowMediaPreview(!showMediaPreview);
+    if (editorRef.current) {
+      const mediaContainers = editorRef.current.querySelectorAll('.media-preview-container');
+      mediaContainers.forEach(container => {
+        const element = container as HTMLElement;
+        element.style.display = showMediaPreview ? 'none' : 'block';
+      });
+    }
   };
 
   // Helper function to create image thumbnails for PDF
@@ -539,7 +654,7 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
           doc.setFontSize(8);
           doc.setFont('helvetica', 'italic');
           doc.setTextColor(0, 0, 255);
-          doc.text("(Click to download)", margin, yPosition + 12);
+          doc.text("(Click to download/preview)", margin, yPosition + 12);
           
           doc.setTextColor(0, 0, 0);
           yPosition += 25;
@@ -670,6 +785,13 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
             title="Insert Document"
           >
             <FileText className="h-4 w-4" />
+          </button>
+          <button
+            className="toolbar-button"
+            onClick={toggleMediaVisibility}
+            title={showMediaPreview ? "Hide Media" : "Show Media"}
+          >
+            {showMediaPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
           <div className="relative">
             <button

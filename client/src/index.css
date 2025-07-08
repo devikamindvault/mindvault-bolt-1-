@@ -42,15 +42,15 @@ body {
 
 /* Enhanced text visibility */
 .text-foreground {
-  color: #f1f5f9 !important;
+  color: #ffffff !important;
 }
 
 .text-card-foreground {
-  color: #f1f5f9 !important;
+  color: #ffffff !important;
 }
 
 .text-muted-foreground {
-  color: #cbd5e1 !important;
+  color: #e2e8f0 !important;
 }
 
 .text-primary {
@@ -58,19 +58,19 @@ body {
 }
 
 .text-slate-100 {
-  color: #f1f5f9 !important;
+  color: #ffffff !important;
 }
 
 .text-slate-200 {
-  color: #e2e8f0 !important;
+  color: #f1f5f9 !important;
 }
 
 .text-slate-300 {
-  color: #cbd5e1 !important;
+  color: #e2e8f0 !important;
 }
 
 .text-slate-400 {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 
 /* Rich text editor styles */
@@ -282,13 +282,15 @@ body {
 /* Enhanced media preview styles */
 .media-preview-container {
   position: relative;
-  display: inline-block;
+  display: block;
   margin: 8px 4px;
   border: 2px solid #374151;
   border-radius: 8px;
   background: #1f2937;
   padding: 8px;
   transition: all 0.2s ease;
+  width: fit-content;
+  max-width: 300px;
 }
 
 .media-preview-container:hover {
@@ -299,11 +301,12 @@ body {
 .media-preview-container img {
   width: 100%;
   height: auto;
-  max-height: 120px;
+  max-height: 200px;
   object-fit: cover;
   border-radius: 4px;
   cursor: pointer;
   transition: transform 0.2s ease;
+  display: block;
 }
 
 .media-preview-container img:hover {
@@ -314,14 +317,14 @@ body {
   position: absolute;
   top: -8px;
   right: -8px;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #ef4444;
   color: white;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -362,6 +365,13 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Fix for media containers in editor */
+.rich-editor .media-preview-container {
+  margin: 12px 0;
+  clear: both;
+  user-select: none;
 }
 /* Common utility classes */
 .rounded-lg {

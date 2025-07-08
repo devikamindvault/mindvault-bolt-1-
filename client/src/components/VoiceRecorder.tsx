@@ -63,16 +63,13 @@ export function VoiceRecorder({ onTranscription, isRecording, setIsRecording }: 
       setRecordingTime(0);
       
       toast({
-        title: "Recording started",
-        description: "Speak clearly into your microphone",
-      });
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      toast({
-        title: "Microphone access denied",
-        description: "Please allow microphone access to record audio",
-        variant: "destructive",
-      });
+    // Simply append the transcribed text with proper spacing
+    const textToAdd = transcribedText.trim();
+    if (textToAdd) {
+      // Add the transcribed text with a space or line break if there's existing content
+      const separator = currentText.trim() ? ' ' : '';
+      const newText = currentText + separator + textToAdd;
+      setCurrentText(newText);
     }
   };
 
