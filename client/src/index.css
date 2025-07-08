@@ -50,7 +50,7 @@ body {
 }
 
 .text-muted-foreground {
-  color: #e2e8f0 !important;
+  color: #d1d5db !important;
 }
 
 .text-primary {
@@ -71,6 +71,39 @@ body {
 
 .text-slate-400 {
   color: #cbd5e1 !important;
+}
+
+/* Enhanced app title visibility */
+.app-title {
+  color: #ffffff !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-weight: 700;
+}
+
+/* Better contrast for all text elements */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+}
+
+p, span, div {
+  color: #f3f4f6 !important;
+}
+
+/* Override specific text colors for better visibility */
+.text-gray-100 {
+  color: #f9fafb !important;
+}
+
+.text-gray-200 {
+  color: #f3f4f6 !important;
+}
+
+.text-gray-300 {
+  color: #e5e7eb !important;
+}
+
+.text-gray-400 {
+  color: #d1d5db !important;
 }
 
 /* Rich text editor styles */
@@ -372,6 +405,33 @@ body {
   margin: 12px 0;
   clear: both;
   user-select: none;
+  line-height: normal;
+}
+
+/* Ensure proper spacing around media in editor */
+.rich-editor .media-preview-container + br {
+  display: block;
+  margin: 8px 0;
+}
+
+.rich-editor .media-preview-container::before,
+.rich-editor .media-preview-container::after {
+  content: "";
+  display: block;
+  height: 8px;
+}
+
+/* Link styles in editor */
+.rich-editor a {
+  color: #60a5fa;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.rich-editor a:hover {
+  color: #93c5fd;
+  text-decoration: none;
 }
 /* Common utility classes */
 .rounded-lg {

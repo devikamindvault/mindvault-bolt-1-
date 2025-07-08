@@ -159,7 +159,9 @@ export default function Goals() {
                 <Mic className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent text-shadow">
+              <span className="text-2xl font-bold text-white drop-shadow-lg app-title">
                 MindVault
+              </span>
               </span>
             </Link>
             
@@ -195,10 +197,10 @@ export default function Goals() {
         <div className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent text-shadow">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-lg">
                 Goals Management
               </h1>
-              <p className="text-lg text-slate-400 max-w-2xl leading-relaxed">
+              <p className="text-lg text-gray-300 max-w-2xl leading-relaxed">
                 Create and organize your goals. Select them in the home page to start writing and tracking your progress with voice-powered journaling.
               </p>
             </div>
@@ -237,8 +239,8 @@ export default function Goals() {
               <div className="p-6 bg-gradient-to-br from-indigo-900/30 to-purple-900/30 rounded-2xl inline-block mb-6 glow-primary">
                 <Target className="h-16 w-16 text-indigo-400" />
               </div>
-              <h3 className="text-2xl font-bold mb-3 text-slate-100">No goals yet</h3>
-              <p className="text-slate-400 mb-8 max-w-md mx-auto leading-relaxed">
+              <h3 className="text-2xl font-bold mb-3 text-white">No goals yet</h3>
+              <p className="text-gray-300 mb-8 max-w-md mx-auto leading-relaxed">
                 Create your first goal to start organizing your thoughts and tracking progress with our voice-powered journaling system.
               </p>
               <Button 
@@ -259,7 +261,7 @@ export default function Goals() {
                 
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl font-bold line-clamp-2 flex-1 mr-3 text-slate-100 group-hover:text-indigo-400 transition-colors">
+                    <CardTitle className="text-xl font-bold line-clamp-2 flex-1 mr-3 text-white group-hover:text-indigo-400 transition-colors">
                       {goal.title}
                     </CardTitle>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -285,13 +287,13 @@ export default function Goals() {
                 
                 <CardContent className="flex-1 flex flex-col">
                   {goal.description && (
-                    <p className="text-slate-400 text-sm mb-6 line-clamp-3 flex-1">
+                    <p className="text-gray-300 text-sm mb-6 line-clamp-3 flex-1">
                       {goal.description}
                     </p>
                   )}
                   
                   <div className="mt-auto space-y-4">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
+                    <div className="flex items-center justify-between text-xs text-gray-400">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(goal.createdAt).toLocaleDateString()}</span>
@@ -322,13 +324,13 @@ export default function Goals() {
       <Dialog open={isOpen} onOpenChange={resetForm}>
         <DialogContent className="sm:max-w-lg bg-slate-900/95 border-slate-700 backdrop-blur-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl text-slate-100">
+            <DialogTitle className="flex items-center gap-3 text-xl text-white">
               <div className="p-2 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg glow-primary">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               {editingGoal ? "Edit Goal" : "Create New Goal"}
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-gray-300">
               {editingGoal 
                 ? "Update your goal details below."
                 : "Define a new goal to track your progress and stay motivated with voice-powered journaling."
@@ -337,7 +339,7 @@ export default function Goals() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold flex items-center gap-2 text-slate-300">
+              <label className="text-sm font-semibold flex items-center gap-2 text-white">
                 <Target className="h-4 w-4 text-indigo-400" />
                 Goal Title *
               </label>
@@ -345,13 +347,13 @@ export default function Goals() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter your goal title"
-                className="border-slate-600 focus:border-indigo-500 bg-slate-800/50 text-slate-100 placeholder:text-slate-500"
+                className="border-slate-600 focus:border-indigo-500 bg-slate-800/50 text-white placeholder:text-slate-400"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold flex items-center gap-2 text-slate-300">
+              <label className="text-sm font-semibold flex items-center gap-2 text-white">
                 <FileText className="h-4 w-4 text-indigo-400" />
                 Description
               </label>
@@ -359,13 +361,13 @@ export default function Goals() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Describe what you want to achieve with this goal..."
-                className="border-slate-600 focus:border-indigo-500 bg-slate-800/50 text-slate-100 placeholder:text-slate-500 min-h-[120px]"
+                className="border-slate-600 focus:border-indigo-500 bg-slate-800/50 text-white placeholder:text-slate-400 min-h-[120px]"
                 rows={5}
               />
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={resetForm} className="border-slate-600 text-slate-300 hover:bg-slate-700">
+              <Button type="button" variant="outline" onClick={resetForm} className="border-slate-600 text-white hover:bg-slate-700">
                 Cancel
               </Button>
               <Button 

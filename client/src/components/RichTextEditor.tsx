@@ -15,7 +15,8 @@ import {
   Upload,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Link
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
@@ -43,6 +44,9 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
   const [fontFamily, setFontFamily] = useState('Georgia');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [showMediaPreview, setShowMediaPreview] = useState(true);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
   const { toast } = useToast();
 
   const emojis = [
@@ -467,6 +471,46 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
     setShowEmojiPicker(false);
   };
 
+  const insertLink = () => {
+    if (!linkUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      
+      const link = document.createElement('a');
+      link.href = linkUrl;
+      link.textContent = linkText || linkUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.cssText = `
+        color: #60a5fa;
+        text-decoration: underline;
+        cursor: pointer;
+      `;
+      
+      range.deleteContents();
+      range.insertNode(link);
+      range.setStartAfter(link);
+      range.setEndAfter(link);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      updateContent();
+    }
+    
+    setShowLinkDialog(false);
+    setLinkUrl('');
+    setLinkText('');
+  };
+
   const toggleMediaVisibility = () => {
     setShowMediaPreview(!showMediaPreview);
     if (editorRef.current) {
@@ -788,6 +832,13 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
           </button>
           <button
             className="toolbar-button"
+            onClick={() => setShowLinkDialog(true)}
+            title="Insert Link"
+          >
+            <Link className="h-4 w-4" />
+          </button>
+          <button
+            className="toolbar-button"
             onClick={toggleMediaVisibility}
             title={showMediaPreview ? "Hide Media" : "Show Media"}
           >
@@ -856,6 +907,59 @@ export function RichTextEditor({ content, onChange, goalTitle }: RichTextEditorP
         }}
         suppressContentEditableWarning={true}
       />
+
+      {/* Link Dialog */}
+      {showLinkDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Insert Link</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  URL *
+                </label>
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Display Text (optional)
+                </label>
+                <input
+                  type="text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Link text"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowLinkDialog(false);
+                  setLinkUrl('');
+                  setLinkText('');
+                }}
+                className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={insertLink}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Insert Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden file inputs */}
       <input
