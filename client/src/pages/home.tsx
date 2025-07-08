@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { Mic, Target, BarChart3, Home as HomeIcon, User, Settings, Save, Plus, Quote, FileText, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -84,8 +85,10 @@ export default function Home() {
 
   // Update word and character count
   useEffect(() => {
-    setCharCount(currentText.length);
-    setWordCount(currentText.trim() ? currentText.trim().split(/\s+/).length : 0);
+    // Remove HTML tags for counting
+    const textOnly = currentText.replace(/<[^>]*>/g, '');
+    setCharCount(textOnly.length);
+    setWordCount(textOnly.trim() ? textOnly.trim().split(/\s+/).length : 0);
   }, [currentText]);
 
   const handleSave = () => {
@@ -106,7 +109,8 @@ export default function Home() {
 
   const handleTranscription = (transcribedText: string) => {
     if (selectedGoalId) {
-      const newText = currentText ? `${currentText}\n\n${transcribedText}` : transcribedText;
+      // Insert transcribed text at the current cursor position or append
+      const newText = currentText ? `${currentText}<br><br>${transcribedText}` : transcribedText;
       setCurrentText(newText);
     } else {
       toast({
@@ -303,22 +307,32 @@ export default function Home() {
               </CardHeader>
               
               <CardContent className="p-0 h-full">
-                <div className="relative h-full min-h-[600px]">
-                  <textarea
-                    value={currentText}
-                    onChange={(e) => setCurrentText(e.target.value)}
-                    placeholder={selectedGoalId 
-                      ? "Start writing your thoughts, ideas, and progress for this goal... You can also use the voice recorder to transcribe your speech!"
-                      : "Please select a goal from the sidebar to begin writing. You can create new goals by clicking 'Create New Goal' or visiting the Goals page."
-                    }
-                    className="w-full h-full min-h-[600px] p-8 border-0 resize-none focus:outline-none focus:ring-0 bg-transparent text-slate-100 placeholder:text-slate-500 text-lg leading-relaxed"
-                    disabled={!selectedGoalId}
-                    style={{ fontFamily: 'ui-serif, Georgia, Cambria, serif' }}
-                  />
+                <div className="relative h-full">
+                  {selectedGoalId ? (
+                    <RichTextEditor
+                      content={currentText}
+                      onChange={setCurrentText}
+                      goalTitle={selectedGoal?.title}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-96 text-slate-500">
+                      <div className="text-center">
+                        <FileText className="h-16 w-16 mx-auto mb-4 text-slate-600" />
+                        <h3 className="text-lg font-medium mb-2">No Goal Selected</h3>
+                        <p className="text-sm">Please select a goal from the sidebar to begin writing.</p>
+                        <Link href="/goals" className="inline-block mt-4">
+                          <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Your First Goal
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Floating status indicator */}
                   {isRecording && (
-                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse glow-primary">
+                    <div className="absolute top-4 right-4 flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg animate-pulse glow-primary z-10">
                       <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
                       <span className="text-sm font-medium">Recording...</span>
                     </div>
