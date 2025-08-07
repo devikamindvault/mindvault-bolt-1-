@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, List, ListOrdered, Image, FileText, Smile, Mic, Save, Download, Eye, X, Upload, Trash2 } from 'lucide-react';
+import {
   Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, 
   FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
 } from 'lucide-react';
@@ -51,7 +51,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [documentModalContent, setDocumentModalContent] = useState('');
   const [documentModalTitle, setDocumentModalTitle] = useState('');
-  const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [modalDocument, setModalDocument] = useState<MediaItem | null>(null);
   
   const editorRef = useRef<HTMLDivElement>(null);
@@ -1394,10 +1393,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         alert('Unable to open document. Please try downloading it instead.');
                       }
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                    className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors" 
+                    title="Download file"
                   >
                     <FileText className="w-4 h-4" />
-                    Open File
+                    Download
                   </button>
                 </div>
               </div>
