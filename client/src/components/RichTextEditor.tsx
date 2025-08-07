@@ -1,11 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  Image, Link, FileText, Smile, Palette, Download, Type, ChevronDown,
-  List, ListOrdered, Quote, Code, Undo, Redo, Upload, X, Search
+import {
+  Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import * as htmlToImage from 'html-to-image';
 import VoiceRecorder from './VoiceRecorder';
 
 interface Idea {
@@ -919,10 +918,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
   };
 
-  return (
-    <div className="rich-text-editor relative min-h-screen">
-      {/* Add padding to prevent overlap with fixed save button */}
-      <style>{`
+                      <div className="text-center py-16">
+                        <div className="bg-gradient-to-br from-purple-600 to-pink-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 opacity-50">
+                          <Lightbulb className="w-12 h-12 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-400 mb-3">No Idea Selected</h3>
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                          Please select an idea from the dropdown above to start writing and developing your thoughts.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default RichTextEditor;
         .rich-text-editor {
           padding-right: 20px;
         }
