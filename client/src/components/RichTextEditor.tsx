@@ -49,6 +49,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [showImageModal, setShowImageModal] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState('');
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [documentModalContent, setDocumentModalContent] = useState('');
+  const [documentModalTitle, setDocumentModalTitle] = useState('');
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [modalDocument, setModalDocument] = useState<MediaItem | null>(null);
   
   const editorRef = useRef<HTMLDivElement>(null);
