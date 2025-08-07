@@ -299,6 +299,60 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const getFileExtension = (filename: string) => {
     return filename.split('.').pop() || '';
   };
+  
+  // Make images resizable like Google Docs
+  const makeImageResizable = (img: HTMLImageElement, container: HTMLElement) => {
+    let isResizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    
+    const resizeHandle = container.querySelector('.resize-se') as HTMLElement;
+    if (!resizeHandle) return;
+    
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = parseInt(window.getComputedStyle(img).width, 10);
+      startHeight = parseInt(window.getComputedStyle(img).height, 10);
+      
+      document.addEventListener('mousemove', handleResize);
+      document.addEventListener('mouseup', stopResize);
+      
+      // Add resizing class for visual feedback
+      container.classList.add('resizing');
+    });
+    
+    const handleResize = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+      
+      // Maintain aspect ratio
+      const aspectRatio = startWidth / startHeight;
+      let newWidth = startWidth + deltaX;
+      
+      // Set minimum and maximum sizes
+      newWidth = Math.max(100, Math.min(800, newWidth));
+      const newHeight = newWidth / aspectRatio;
+      
+      img.style.width = newWidth + 'px';
+      img.style.height = newHeight + 'px';
+    };
+    
+    const stopResize = () => {
+      isResizing = false;
+      container.classList.remove('resizing');
+      document.removeEventListener('mousemove', handleResize);
+      document.removeEventListener('mouseup', stopResize);
+      handleContentChange();
+    };
+  };
 
   const handleVoiceTranscription = (text: string) => {
     if (!selectedIdea) return;

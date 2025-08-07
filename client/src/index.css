@@ -478,17 +478,38 @@ p, span, div {
 
 /* Fix for media containers in editor */
 .rich-editor .media-preview-container {
-  margin: 16px 0;
+  margin: 20px 0;
   clear: both;
   user-select: none;
   line-height: normal;
   display: block;
+  width: fit-content;
 }
 
 /* Ensure proper spacing around media in editor */
-.rich-editor .media-preview-container + * {
-  margin-top: 16px;
+.rich-editor .image-preview-container + *,
+.rich-editor .document-preview-container + * {
+  margin-top: 20px;
   display: block;
+  clear: both;
+}
+
+/* Prevent text wrapping around media */
+.rich-editor .image-preview-container,
+.rich-editor .document-preview-container {
+  display: block;
+  float: none;
+  clear: both;
+  margin: 20px 0;
+}
+
+/* Ensure line breaks after media */
+.rich-editor .image-preview-container::after,
+.rich-editor .document-preview-container::after {
+  content: "";
+  display: block;
+  clear: both;
+  height: 0;
 }
 
 /* Link styles in editor */
