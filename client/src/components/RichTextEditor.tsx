@@ -400,7 +400,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             pdf.setFont('helvetica', 'normal');
           }
         } else {
-          // Handle text content
+         const initialContent = `<p>${selectedIdea.description}</p><p><br></p>`;
           const textContent = element.textContent || '';
           if (textContent.trim()) {
             // Handle different text styles
@@ -620,7 +620,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     <button
                       key={idea.id}
                       onClick={() => handleIdeaSelect(idea)}
-                      className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
+                     className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 bg-slate-800"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
