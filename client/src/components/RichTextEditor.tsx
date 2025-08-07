@@ -136,17 +136,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       // Save content
       localStorage.setItem(`idea-content-${selectedIdea.id}`, currentContent);
       
-      // Save media metadata only (without large file data)
-      const mediaMetadata = mediaItems.map(item => ({
-        id: item.id,
-        type: item.type,
-        name: item.name,
-        // Don't save the large url data to localStorage
-        url: item.type === 'image' ? 'stored-in-indexeddb' : item.url
-      }));
-      
-      localStorage.setItem(`idea-media-${selectedIdea.id}`, JSON.stringify(mediaMetadata));
-      
       // Store large media files in IndexedDB
       await saveMediaToIndexedDB(selectedIdea.id, mediaItems);
       
