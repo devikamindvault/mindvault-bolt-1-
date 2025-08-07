@@ -36,28 +36,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     return localStorage.getItem('editor-bg-color') || '#1f2937';
   });
   const [textColor, setTextColor] = useState('#ffffff');
-  const handleVoiceTranscription = (transcription: string) => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const currentValue = textarea.value;
-      
-      // Insert transcription at cursor position
-      const newValue = currentValue.substring(0, start) + transcription + currentValue.substring(end);
-      
-      // Update the content
-      setContent(newValue);
-      setHasUnsavedChanges(true);
-      
-      // Set cursor position after the inserted text
-      setTimeout(() => {
-        const newCursorPosition = start + transcription.length;
-        textarea.setSelectionRange(newCursorPosition, newCursorPosition);
-        textarea.focus();
-      }, 0);
-    }
-  };
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
