@@ -499,7 +499,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <button
           data-idea-trigger
           onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
-          className="w-full p-4 bg-slate-800 border border-slate-600 rounded-xl text-left flex items-center justify-between hover:border-purple-500 transition-all"
+          className="w-full p-4 bg-slate-800 border-2 border-slate-600 rounded-xl text-left flex items-center justify-between hover:border-purple-500 hover:bg-slate-700 transition-all shadow-lg"
         >
           <div className="flex items-center gap-3">
             <div className="text-2xl">💡</div>
@@ -508,7 +508,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 {selectedIdea ? selectedIdea.title : 'Select an idea to work on'}
               </p>
               {selectedIdea && (
-                <p className="text-gray-400 text-sm">{selectedIdea.category}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {selectedIdea.category && (
+                    <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
+                      {selectedIdea.category}
+                    </span>
+                  )}
+                  {selectedIdea.isPinned && (
+                    <span className="text-yellow-400 text-sm">📌 Pinned</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -516,11 +525,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </button>
 
         {showIdeaDropdown && (
-          <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+          <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
             {ideas.length === 0 ? (
-              <div className="p-4 text-center text-gray-400">
-                <p>No ideas created yet.</p>
-                <p className="text-sm">Go to Ideas page to create your first idea!</p>
+              <div className="p-6 text-center">
+                <div className="text-4xl mb-3">💡</div>
+                <p className="text-white font-medium mb-2">No ideas created yet.</p>
+                <p className="text-gray-400 text-sm">Go to Ideas page to create your first idea!</p>
               </div>
             ) : (
               ideas.map((idea) => (
@@ -534,24 +544,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     }
                     setShowIdeaDropdown(false);
                   }}
-                  className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between"
+                  className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-lg">
                       {idea.isPinned ? '📌' : '💡'}
                     </div>
                     <div>
-                      <p className="text-white font-medium">{idea.title}</p>
-                      <p className="text-gray-400 text-sm line-clamp-1">{idea.description}</p>
+                      <p className="text-white font-medium group-hover:text-purple-300 transition-colors">{idea.title}</p>
+                      <p className="text-gray-400 text-sm line-clamp-1 group-hover:text-gray-300 transition-colors">{idea.description}</p>
                       {idea.category && (
-                        <span className="inline-block mt-1 px-2 py-1 bg-purple-600 text-white text-xs rounded-full">
+                        <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
                           {idea.category}
                         </span>
                       )}
                     </div>
                   </div>
                   {selectedIdea?.id === idea.id && (
-                    <div className="text-green-400">✓</div>
+                    <div className="text-green-400 text-xl font-bold">✓</div>
                   )}
                 </button>
               ))
