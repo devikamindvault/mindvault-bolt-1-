@@ -937,6 +937,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
         }`}
+        style={{ right: '24px', left: 'auto' }}
         title={
           !selectedIdea 
             ? 'Select an idea first' 
@@ -954,7 +955,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
       {/* Last Saved Indicator */}
       {lastSaved && (
-        <div className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30">
+        <div className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30" style={{ right: '24px', left: 'auto' }}>
           ✅ Last saved: {lastSaved.toLocaleTimeString()}
         </div>
       )}
