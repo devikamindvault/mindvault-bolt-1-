@@ -30,6 +30,33 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState('#1f2937');
+  const [textColor, setTextColor] = useState('#f9fafb');
+  const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [currentSelection, setCurrentSelection] = useState<Range | null>(null);
+
+  // Emojis and stickers arrays
+  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
+  const stickers = ['🎉', '🎊', '🎈', '🎁', '🎀', '🎂', '🍰', '🧁', '🍭', '🍬', '🍫', '🍩', '🍪', '☕', '🍵', '🥤', '🧋', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🍾', '🎵', '🎶', '🎤', '🎧', '🎼', '🎹', '🥁', '🎸', '🎺', '🎷', '🎻', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '⭐', '🌟', '✨', '💫', '🔥', '💥', '💢', '💨', '💦', '💧', '☀️', '🌙', '⭐', '🌈', '☁️', '⛅', '🌤️', '⛈️', '🌩️', '❄️', '☃️', '⛄'];
+
+  // Daily quotes function
+  const getTodaysQuote = () => {
+    const quotes = [
+      "The best way to predict the future is to create it.",
+      "Innovation distinguishes between a leader and a follower.",
+      "Your ideas are the seeds of tomorrow's reality.",
+      "Creativity is intelligence having fun.",
+      "Every great idea starts with a single thought.",
+      "The mind that opens to a new idea never returns to its original size.",
+      "Ideas are the currency of the future."
+    ];
+    const today = new Date().getDate();
+    return quotes[today % quotes.length];
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
