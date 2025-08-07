@@ -80,25 +80,25 @@ function App() {
           <nav className="flex gap-3">
             <button
               onClick={() => setCurrentPage('home')}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 font-bold text-lg min-w-[140px] shadow-xl transform hover:scale-105 ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-semibold text-base min-w-[120px] shadow-lg transform hover:scale-105 ${
                 currentPage === 'home' 
-                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-2xl border-2 border-indigo-400 animate-pulse' 
-                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border-2 border-slate-500'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl border border-indigo-400' 
+                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border border-slate-500'
               }`}
             >
-              <Home className="w-6 h-6" />
-              <span>Home</span>
+              <Home className="w-5 h-5" />
+              <span className="hidden sm:inline">Home</span>
             </button>
             <button
               onClick={() => setCurrentPage('ideas')}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 font-bold text-lg min-w-[140px] shadow-xl transform hover:scale-105 ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-semibold text-base min-w-[120px] shadow-lg transform hover:scale-105 ${
                 currentPage === 'ideas' 
-                  ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white shadow-2xl border-2 border-purple-400 animate-pulse' 
-                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border-2 border-slate-500'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl border border-purple-400' 
+                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border border-slate-500'
               }`}
             >
-              <Lightbulb className="w-6 h-6" />
-              <span>Ideas</span>
+              <Lightbulb className="w-5 h-5" />
+              <span className="hidden sm:inline">Ideas</span>
             </button>
           </nav>
         </div>

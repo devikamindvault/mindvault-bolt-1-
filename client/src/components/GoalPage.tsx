@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Lightbulb, Calendar, Pin, PinOff, Eye, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Lightbulb, Calendar, Pin, PinOff, Eye, X, Filter, Download, FileText } from 'lucide-react';
 
 interface Idea {
   id: string;
@@ -9,6 +9,15 @@ interface Idea {
   deadline: string;
   isPinned: boolean;
   createdAt: string;
+  editHistory?: EditEntry[];
+}
+
+interface EditEntry {
+  id: string;
+  content: string;
+  timestamp: string;
+  title: string;
+  description: string;
 }
 
 interface GoalPageProps {
@@ -20,6 +29,11 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
   const [previewIdea, setPreviewIdea] = useState<Idea | null>(null);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [filteredContent, setFilteredContent] = useState<string>('');
+  const [showDatePreview, setShowDatePreview] = useState(false);
+  const [selectedIdeaForFilter, setSelectedIdeaForFilter] = useState<Idea | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -117,6 +131,77 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
     saveIdeas(updatedIdeas);
   };
 
+  const getEditHistory = (ideaId: string): EditEntry[] => {
+    const history = localStorage.getItem(`idea-history-${ideaId}`);
+    return history ? JSON.parse(history) : [];
+  };
+
+  const filterContentByDate = (idea: Idea, startDate: string, endDate: string) => {
+    const history = getEditHistory(idea.id);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include the entire end date
+    
+    const filteredEntries = history.filter(entry => {
+      const entryDate = new Date(entry.timestamp);
+      return entryDate >= start && entryDate <= end;
+    });
+    
+    if (filteredEntries.length === 0) {
+      return `No content found between ${startDate} and ${endDate}`;
+    }
+    
+    let content = `Content from ${startDate} to ${endDate}\n\n`;
+    filteredEntries.forEach((entry, index) => {
+      content += `--- Entry ${index + 1} (${new Date(entry.timestamp).toLocaleDateString()}) ---\n`;
+      content += `Title: ${entry.title}\n`;
+      content += `Description: ${entry.description}\n`;
+      content += `Content: ${entry.content}\n\n`;
+    });
+    
+    return content;
+  };
+
+  const handleDateFilter = () => {
+    if (!selectedIdeaForFilter || !dateRange.start || !dateRange.end) {
+      alert('Please select an idea and both start and end dates');
+      return;
+    }
+    
+    const content = filterContentByDate(selectedIdeaForFilter, dateRange.start, dateRange.end);
+    setFilteredContent(content);
+    setShowDatePreview(true);
+  };
+
+  const downloadFilteredContent = () => {
+    if (!filteredContent || !selectedIdeaForFilter) return;
+    
+    const blob = new Blob([filteredContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedIdeaForFilter.title}_${dateRange.start}_to_${dateRange.end}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const workWithFilteredContent = () => {
+    if (!selectedIdeaForFilter || !filteredContent) return;
+    
+    // Create a new idea with the filtered content
+    const newIdea: Idea = {
+      ...selectedIdeaForFilter,
+      description: filteredContent,
+      title: `${selectedIdeaForFilter.title} (${dateRange.start} to ${dateRange.end})`
+    };
+    
+    onSelectIdea(newIdea);
+    setShowDatePreview(false);
+    setShowDateFilter(false);
+  };
+
   // Sort ideas: pinned first, then by creation date
   const sortedIdeas = [...ideas].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
@@ -149,10 +234,17 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 mr-3"
         >
           <Plus className="w-5 h-5" />
           New Idea
+        </button>
+        <button
+          onClick={() => setShowDateFilter(true)}
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+        >
+          <Filter className="w-5 h-5" />
+          Date Filter
         </button>
       </div>
 
@@ -232,6 +324,130 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
           </div>
         </div>
       )}
+      {/* Date Filter Modal */}
+      {showDateFilter && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-600 p-8 rounded-2xl w-full max-w-lg shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+              <Filter className="w-6 h-6 text-green-400" />
+              Filter Content by Date Range
+            </h2>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Select Idea</label>
+                <select
+                  value={selectedIdeaForFilter?.id || ''}
+                  onChange={(e) => {
+                    const idea = ideas.find(i => i.id === e.target.value);
+                    setSelectedIdeaForFilter(idea || null);
+                  }}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                >
+                  <option value="">Choose an idea...</option>
+                  {ideas.map(idea => (
+                    <option key={idea.id} value={idea.id}>{idea.title}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Start Date</label>
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">End Date</label>
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-6">
+              <button
+                onClick={handleDateFilter}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              >
+                Filter & Preview
+              </button>
+              <button
+                onClick={() => {
+                  setShowDateFilter(false);
+                  setSelectedIdeaForFilter(null);
+                  setDateRange({ start: '', end: '' });
+                }}
+                className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-lg font-semibold transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Date Preview Modal */}
+      {showDatePreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {selectedIdeaForFilter?.title} - Date Range Content
+                  </h2>
+                  <p className="text-gray-400">
+                    {dateRange.start} to {dateRange.end}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadFilteredContent}
+                  className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all duration-200 flex items-center gap-2"
+                  title="Download Content"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+                <button
+                  onClick={workWithFilteredContent}
+                  className="p-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-all duration-200 flex items-center gap-2"
+                  title="Work with this content"
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="hidden sm:inline">Work with this</span>
+                </button>
+                <button
+                  onClick={() => setShowDatePreview(false)}
+                  className="p-2 bg-slate-700 text-gray-300 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="prose prose-invert max-w-none">
+                <pre className="text-gray-200 leading-relaxed whitespace-pre-wrap text-base bg-slate-900 p-4 rounded-lg border border-slate-600">
+                  {filteredContent}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Preview Modal */}
       {previewIdea && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm p-4">

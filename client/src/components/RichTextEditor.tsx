@@ -155,6 +155,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       const newTitle = titleElement?.textContent || selectedIdea.title;
       const newDescription = descElement?.textContent || selectedIdea.description;
       
+      // Save to edit history
+      const historyKey = `idea-history-${selectedIdea.id}`;
+      const existingHistory = localStorage.getItem(historyKey);
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      const newEntry = {
+        id: Date.now().toString(),
+        content: content,
+        timestamp: new Date().toISOString(),
+        title: newTitle,
+        description: newDescription
+      };
+      
+      history.push(newEntry);
+      localStorage.setItem(historyKey, JSON.stringify(history));
+      
       // Update the idea in localStorage
       const savedIdeas = localStorage.getItem('mindvault-ideas');
       if (savedIdeas) {
