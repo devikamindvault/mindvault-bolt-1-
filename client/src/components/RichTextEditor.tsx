@@ -76,32 +76,33 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   // Load content when selectedIdea changes
   useEffect(() => {
     if (selectedIdea) {
-      const savedContent = localStorage.getItem(`idea-content-${selectedIdea.id}`);
-      const savedMedia = localStorage.getItem(`idea-media-${selectedIdea.id}`);
-      
-      if (savedContent) {
-        setContent(savedContent);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = savedContent;
+      const loadContent = async () => {
+        const savedContent = localStorage.getItem(`idea-content-${selectedIdea.id}`);
+        
+        if (savedContent) {
+          setContent(savedContent);
+          if (editorRef.current) {
+            editorRef.current.innerHTML = savedContent;
+          }
+        } else {
+          const initialContent = `<p>${selectedIdea.description}</p><p><br></p>`;
+          setContent(initialContent);
+          if (editorRef.current) {
+            editorRef.current.innerHTML = initialContent;
+          }
         }
-      } else {
-        const initialContent = `<p>${selectedIdea.description}</p><p><br></p>`;
-        setContent(initialContent);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = initialContent;
-        }
-      }
-      
-      if (savedMedia) {
+        
+        // Load media from IndexedDB
         try {
-          setMediaItems(JSON.parse(savedMedia));
+          const mediaFromDB = await loadMediaFromIndexedDB(selectedIdea.id);
+          setMediaItems(mediaFromDB);
         } catch (error) {
-          console.error('Error parsing saved media:', error);
+          console.error('Error loading media:', error);
           setMediaItems([]);
         }
-      } else {
-        setMediaItems([]);
-      }
+      };
+      
+      loadContent();
     } else {
       setContent('');
       setMediaItems([]);
@@ -118,11 +119,32 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     const currentContent = editorRef.current.innerHTML;
     setContent(currentContent);
     
-    // Save content
-    localStorage.setItem(`idea-content-${selectedIdea.id}`, currentContent);
-    
-    // Save media
-    localStorage.setItem(`idea-media-${selectedIdea.id}`, JSON.stringify(mediaItems));
+    try {
+      // Save content
+      localStorage.setItem(`idea-content-${selectedIdea.id}`, currentContent);
+      
+      // Save media metadata only (without large file data)
+      const mediaMetadata = mediaItems.map(item => ({
+        id: item.id,
+        type: item.type,
+        name: item.name,
+        // Don't save the large url data to localStorage
+        url: item.type === 'image' ? 'stored-in-indexeddb' : item.url
+      }));
+      
+      localStorage.setItem(`idea-media-${selectedIdea.id}`, JSON.stringify(mediaMetadata));
+      
+      // Store large media files in IndexedDB
+      saveMediaToIndexedDB(selectedIdea.id, mediaItems);
+      
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.error('Storage quota exceeded. Consider reducing file sizes or number of files.');
+        alert('Storage limit reached. Please reduce the number or size of uploaded files.');
+      } else {
+        console.error('Error saving content:', error);
+      }
+    }
     
     // Save to edit history
     const history = getEditHistory(selectedIdea.id);
@@ -141,6 +163,73 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     window.dispatchEvent(new CustomEvent('ideasUpdated', { detail: ideas }));
   };
 
+  // IndexedDB functions for storing large media files
+  const saveMediaToIndexedDB = async (ideaId: string, mediaItems: MediaItem[]) => {
+    try {
+      const request = indexedDB.open('IdeaMediaDB', 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains('media')) {
+          db.createObjectStore('media', { keyPath: 'id' });
+        }
+      };
+      
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const transaction = db.transaction(['media'], 'readwrite');
+        const store = transaction.objectStore('media');
+        
+        // Clear existing media for this idea
+        const clearRequest = store.delete(`idea-${ideaId}`);
+        
+        clearRequest.onsuccess = () => {
+          // Store new media data
+          const mediaData = {
+            id: `idea-${ideaId}`,
+            items: mediaItems
+          };
+          store.add(mediaData);
+        };
+      };
+    } catch (error) {
+      console.error('Error saving to IndexedDB:', error);
+    }
+  };
+
+  const loadMediaFromIndexedDB = async (ideaId: string): Promise<MediaItem[]> => {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open('IdeaMediaDB', 1);
+        
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction(['media'], 'readonly');
+          const store = transaction.objectStore('media');
+          const getRequest = store.get(`idea-${ideaId}`);
+          
+          getRequest.onsuccess = () => {
+            if (getRequest.result) {
+              resolve(getRequest.result.items);
+            } else {
+              resolve([]);
+            }
+          };
+          
+          getRequest.onerror = () => {
+            resolve([]);
+          };
+        };
+        
+        request.onerror = () => {
+          resolve([]);
+        };
+      } catch (error) {
+        console.error('Error loading from IndexedDB:', error);
+        resolve([]);
+      }
+    });
+  };
   const getEditHistory = (ideaId: string): EditEntry[] => {
     const history = localStorage.getItem(`idea-history-${ideaId}`);
     return history ? JSON.parse(history) : [];
@@ -182,6 +271,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     const files = event.target.files;
     if (files) {
       Array.from(files).forEach(file => {
+        // Check file size (limit to 5MB per image)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`Image "${file.name}" is too large. Please use images smaller than 5MB.`);
+          return;
+        }
+        
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (e) => {
@@ -210,6 +305,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     const files = event.target.files;
     if (files) {
       Array.from(files).forEach(file => {
+        // Check file size (limit to 10MB per document)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`Document "${file.name}" is too large. Please use documents smaller than 10MB.`);
+          return;
+        }
+        
         const reader = new FileReader();
         reader.onload = (e) => {
           const fileUrl = e.target?.result as string;
@@ -233,12 +334,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const insertImagePreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
-    // Create a new paragraph to ensure proper positioning
     const currentSelection = window.getSelection();
-    const range = currentSelection?.getRangeAt(0);
+    let range = null;
     
-    // If there's a selection, insert at cursor position
-    if (range) {
+    // Check if there's a valid selection range
+    if (currentSelection && currentSelection.rangeCount > 0) {
+      range = currentSelection.getRangeAt(0);
       range.deleteContents();
     }
     
@@ -293,12 +394,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const insertDocumentPreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
-    // Create a new paragraph to ensure proper positioning
     const currentSelection = window.getSelection();
-    const range = currentSelection?.getRangeAt(0);
+    let range = null;
     
-    // If there's a selection, insert at cursor position
-    if (range) {
+    // Check if there's a valid selection range
+    if (currentSelection && currentSelection.rangeCount > 0) {
+      range = currentSelection.getRangeAt(0);
       range.deleteContents();
     }
     
