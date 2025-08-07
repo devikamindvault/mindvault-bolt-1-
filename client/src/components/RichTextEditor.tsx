@@ -1374,7 +1374,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
-                    Open
+                    View
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        // Create a temporary link element for download
+                        const link = document.createElement('a');
+                        link.href = modalDocument.url;
+                        link.download = modalDocument.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      } catch (error) {
+                        console.error('Error opening document:', error);
+                        alert('Unable to open document. Please try downloading it instead.');
+                      }
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Open File
                   </button>
                 </div>
               </div>
