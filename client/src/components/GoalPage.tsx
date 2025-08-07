@@ -260,8 +260,7 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading content:', error);
-      alert('Error downloading content. Please try again.');
+  } catch (error) {
     }
   };
 
