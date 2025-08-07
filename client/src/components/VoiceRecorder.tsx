@@ -3,9 +3,10 @@ import { Mic, MicOff, Square, Volume2 } from 'lucide-react';
 
 interface VoiceRecorderProps {
   onTranscription: (text: string) => void;
+  disabled?: boolean;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, disabled = false }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -130,7 +131,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
 
   return (
     <div className="voice-recorder flex items-center gap-2">
-      {!isRecording && !isProcessing && (
+      {!isRecording && !isProcessing && !disabled && (
         <button
           onClick={startRecording}
           className="toolbar-button hover:bg-blue-600 transition-all duration-200 flex items-center gap-1"
@@ -140,7 +141,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
         </button>
       )}
       
-      {isRecording && (
+      {isRecording && !disabled && (
         <button
           onClick={stopRecording}
           className="toolbar-button bg-red-600 hover:bg-red-700 transition-all duration-200 flex items-center gap-1 animate-pulse"
@@ -150,13 +151,23 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
         </button>
       )}
       
-      {isProcessing && (
+      {isProcessing && !disabled && (
         <button
           disabled
           className="toolbar-button bg-gray-600 text-white flex items-center gap-1 cursor-not-allowed"
           title="Processing..."
         >
           <MicOff className="w-4 h-4 animate-pulse" />
+        </button>
+      )}
+      
+      {disabled && (
+        <button
+          disabled
+          className="toolbar-button bg-gray-700 text-gray-500 cursor-not-allowed"
+          title="Select an idea to use voice recording"
+        >
+          <Mic className="w-4 h-4" />
         </button>
       )}
       

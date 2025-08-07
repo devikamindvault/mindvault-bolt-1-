@@ -213,6 +213,22 @@ p, span, div {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
+.toolbar-button:disabled {
+  background: #374151;
+  border-color: #4b5563;
+  color: #6b7280;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.toolbar-button:disabled:hover {
+  background: #374151;
+  border-color: #4b5563;
+  transform: none;
+  box-shadow: none;
+}
+
 .toolbar-button.active {
   background: linear-gradient(135deg, #60a5fa, #3b82f6);
   border-color: #60a5fa;

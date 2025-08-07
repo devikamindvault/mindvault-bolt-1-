@@ -2,10 +2,10 @@ import React, { useRef, useState, useEffect } from 'react';
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
   Image, Link, FileText, Smile, Palette, Download, Type, ChevronDown,
-  List, ListOrdered, Quote, Code, Undo, Redo, Upload, X
+  List, ListOrdered, Quote, Code, Undo, Redo, Upload, X, Search
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search } from 'lucide-react';
+import * as htmlToImage from 'html-to-image';
 import VoiceRecorder from './VoiceRecorder';
 
 interface Idea {
@@ -28,12 +28,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [textColor, setTextColor] = useState('#f9fafb');
   const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -70,13 +71,33 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       }
       if (!target.closest('.idea-dropdown') && !target.closest('[data-idea-trigger]')) {
         setShowIdeaDropdown(false);
-        setSearchQuery('');
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowIdeaDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Filter ideas based on search term
+  const filteredIdeas = ideas.filter(idea =>
+    idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    idea.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (idea.category && idea.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   useEffect(() => {
     if (selectedIdea && editorRef.current) {
@@ -91,7 +112,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       editorRef.current.style.color = savedTextColor;
       editorRef.current.innerHTML = `
         <h1 style="color: ${savedTextColor}; font-size: 32px; font-weight: bold; margin-bottom: 20px;">
-          ${selectedIdea.title}
+          💡 ${selectedIdea.title}
         </h1>
         <p style="color: ${savedTextColor}; font-size: 18px; line-height: 1.6; margin-bottom: 30px;">
           ${selectedIdea.description}
@@ -197,6 +218,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     } catch (error) {
       console.error('Error saving content:', error);
       toast('Failed to save content', 'error');
+    }
+  };
+
+  const handleIdeaSelect = (idea: Idea) => {
+    onSelectIdea(idea);
+    setShowIdeaDropdown(false);
+    setSearchTerm('');
+  };
+
+  const clearIdeaSelection = () => {
+    onSelectIdea(null);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = '';
     }
   };
 
@@ -883,28 +917,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     } finally {
       setIsDownloading(false);
     }
-                <div className="p-3 border-b border-slate-600">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search ideas..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
-                      autoFocus
-                    />
-                  </div>
-                </div>
   };
-                  {filteredIdeas.length === 0 ? (
-                    searchQuery ? (
-                      <div className="p-4 text-center text-gray-400">
-                        <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>No ideas found matching "{searchQuery}"</p>
-                        <p className="text-sm mt-1">Try a different search term</p>
-                      </div>
-                    ) : (
+
   return (
     <div className="rich-text-editor relative min-h-screen">
       {/* Add padding to prevent overlap with fixed save button */}
@@ -919,15 +933,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         }
       `}</style>
       
-                    )
       {/* Daily Quote */}
-                    filteredIdeas.map((idea) => (
+      <div className="mb-8 p-6 bg-gradient-to-r from-indigo-900/60 via-purple-900/60 to-pink-900/60 rounded-2xl border border-indigo-400/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 animate-pulse"></div>
         <div className="flex items-center gap-3">
           <div className="text-4xl animate-bounce">💭</div>
           <div className="relative z-10">
             <p className="text-white font-medium italic text-xl leading-relaxed drop-shadow-lg">
-                          setSearchQuery('');
               "{getTodaysQuote()}"
             </p>
             <p className="text-indigo-300 text-sm mt-3 font-semibold">✨ Daily Inspiration</p>
@@ -936,88 +948,119 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       </div>
 
       {/* Idea Selection Dropdown */}
-      <div className="mb-8 relative">
-        <button
-          data-idea-trigger
-          onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
-          className="w-full p-6 bg-gradient-to-r from-slate-800 to-slate-700 border-2 border-slate-600 rounded-2xl text-left flex items-center justify-between hover:border-purple-400 hover:from-slate-700 hover:to-slate-600 transition-all duration-300 shadow-2xl hover:shadow-purple-500/20 transform hover:scale-[1.02]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="text-3xl animate-pulse">💡</div>
-            <div>
-              <p className="text-white font-bold text-lg">
-                {selectedIdea ? selectedIdea.title : 'Select an idea to work on'}
-              </p>
-              {selectedIdea && (
-                <div className="flex items-center gap-2 mt-1">
-                  {selectedIdea.category && (
-                    <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-full font-bold shadow-lg">
-                      {selectedIdea.category}
-                    </span>
-                  )}
-                  {selectedIdea.isPinned && (
-                    <span className="text-yellow-400 text-sm font-bold animate-pulse">📌 Pinned</span>
-                  )}
-                </div>
+      <div className="mb-6 relative" ref={dropdownRef}>
+        <label className="block text-lg font-semibold text-white mb-3">
+          Select an Idea to Work On
+        </label>
+        <div className="relative">
+          <button
+            onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
+            className={`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
+              selectedIdea 
+                ? 'border-purple-500 bg-gradient-to-r from-slate-800 to-purple-900/30' 
+                : 'border-slate-600 hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {selectedIdea ? (
+                <>
+                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                  <div>
+                    <span className="text-white font-semibold text-lg">{selectedIdea.title}</span>
+                    <p className="text-gray-400 text-sm mt-1">{selectedIdea.category || 'Uncategorized'}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                  <span className="text-gray-400 text-lg">Choose an idea to start writing...</span>
+                </>
               )}
             </div>
-          </div>
-          <ChevronDown className={`w-6 h-6 text-purple-400 transition-transform duration-300 ${showIdeaDropdown ? 'rotate-180' : ''}`} />
-        </button>
-
-        {showIdeaDropdown && (
-          <div className="idea-dropdown absolute top-full left-0 right-0 mt-3 bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-purple-500/30 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto backdrop-blur-md">
-            {ideas.length === 0 ? (
-              <div className="p-6 text-center">
-                <div className="text-5xl mb-4 animate-bounce">💡</div>
-                <p className="text-white font-medium mb-2" style={{ color: '#ffffff !important' }}>No ideas created yet.</p>
-                <p className="text-gray-400 text-sm" style={{ color: '#9ca3af !important' }}>Go to Ideas page to create your first idea!</p>
-              </div>
-            ) : (
-              ideas.map((idea) => (
+            <div className="flex items-center gap-2">
+              {selectedIdea && (
                 <button
-                  key={idea.id}
-                  onClick={() => {
-                    onSelectIdea(idea);
-                    setShowIdeaDropdown(false);
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearIdeaSelection();
                   }}
-                  className="w-full p-5 text-left hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20 transition-all duration-300 border-b border-slate-700/50 last:border-b-0 flex items-center justify-between group transform hover:scale-[1.02]"
-                  style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', color: '#ffffff' }}
+                  className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                  title="Clear selection"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="text-lg">
-                      {idea.isPinned ? '📌' : '💡'}
-                    </div>
-                    <div>
-                      <p className="font-bold text-lg transition-colors group-hover:text-purple-300" style={{ color: '#ffffff' }}>{idea.title}</p>
-                      <p className="text-sm line-clamp-1 transition-colors" style={{ color: '#9ca3af' }}>{idea.description}</p>
-                      {idea.category && (
-                        <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-bold shadow-lg">
-                          {idea.category}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {selectedIdea?.id === idea.id && (
-                    <div className="text-2xl font-bold animate-pulse" style={{ color: '#4ade80' }}>✓</div>
-                  )}
+                  <X className="w-4 h-4" />
                 </button>
-              ))
-            )}
-          </div>
-        )}
+              )}
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
+            </div>
+          </button>
+
+          {showIdeaDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
+              {/* Search Input */}
+              <div className="p-4 border-b border-slate-600">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search ideas..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Ideas List */}
+              <div className="max-h-64 overflow-y-auto">
+                {filteredIdeas.length > 0 ? (
+                  filteredIdeas.map((idea) => (
+                    <button
+                      key={idea.id}
+                      onClick={() => handleIdeaSelect(idea)}
+                      className={`w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
+                        selectedIdea?.id === idea.id ? 'bg-purple-900/30 border-purple-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${idea.isPinned ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
+                        <div className="flex-1">
+                          <h4 className="text-white font-semibold">{idea.title}</h4>
+                          <p className="text-gray-400 text-sm mt-1 line-clamp-2">{idea.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            {idea.category && (
+                              <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded-full">
+                                {idea.category}
+                              </span>
+                            )}
+                            {idea.isPinned && (
+                              <span className="text-yellow-500 text-xs">📌 Pinned</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-400">
+                    {searchTerm ? 'No ideas found matching your search' : 'No ideas available'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md">
+      <div className={`editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md ${!selectedIdea ? 'opacity-50' : ''}`}>
         {/* Text Formatting */}
         <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
-          <button onClick={() => execCommand('bold')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Bold">
+          <button onClick={() => execCommand('bold')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" disabled={!selectedIdea} title="Bold">
             <Bold className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('italic')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Italic">
+          <button onClick={() => execCommand('italic')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" disabled={!selectedIdea} title="Italic">
             <Italic className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('underline')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Underline">
+          <button onClick={() => execCommand('underline')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" disabled={!selectedIdea} title="Underline">
             <Underline className="w-4 h-4" />
           </button>
         </div>
@@ -1037,10 +1080,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
         {/* Lists */}
         <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
-          <button onClick={() => execCommand('insertUnorderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" title="Bullet List">
+          <button onClick={() => execCommand('insertUnorderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" disabled={!selectedIdea} title="Bullet List">
             <List className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('insertOrderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" title="Numbered List">
+          <button onClick={() => execCommand('insertOrderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" disabled={!selectedIdea} title="Numbered List">
             <ListOrdered className="w-4 h-4" />
           </button>
         </div>
@@ -1064,6 +1107,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           <button 
             onClick={() => fileInputRef.current?.click()} 
             className="toolbar-button hover:bg-blue-600 transition-all duration-200" 
+            disabled={!selectedIdea}
             title="Upload Image"
           >
             <Image className="w-4 h-4" />
@@ -1071,11 +1115,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           <button 
             onClick={() => documentInputRef.current?.click()} 
             className="toolbar-button hover:bg-blue-600 transition-all duration-200" 
+            disabled={!selectedIdea}
             title="Upload Document"
           >
             <Upload className="w-4 h-4" />
           </button>
-          <button onClick={insertLink} className="toolbar-button hover:bg-blue-600 transition-all duration-200" title="Insert Link">
+          <button onClick={insertLink} className="toolbar-button hover:bg-blue-600 transition-all duration-200" disabled={!selectedIdea} title="Insert Link">
             <Link className="w-4 h-4" />
           </button>
         </div>
@@ -1086,6 +1131,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             data-emoji-trigger
             onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
             className="toolbar-button hover:bg-yellow-600 transition-all duration-200" 
+            disabled={!selectedIdea}
             title="Insert Emoji"
           >
             <Smile className="w-4 h-4" />
@@ -1256,58 +1302,81 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
         {/* Voice Recording */}
         <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
-          <VoiceRecorder onTranscription={handleVoiceTranscription} />
+          <VoiceRecorder 
+            onTranscription={handleVoiceTranscription} 
+            disabled={!selectedIdea}
+          />
         </div>
       </div>
       
-      <div 
-        ref={editorRef}
-        className="rich-editor min-h-[600px] border-2 border-slate-600 border-t-0 rounded-b-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/50 transition-all overflow-auto shadow-2xl backdrop-blur-sm"
-        contentEditable
-        suppressContentEditableWarning={true}
-        onPaste={handlePaste}
-        style={{
-          backgroundColor: backgroundColor,
-          color: textColor,
-          padding: selectedIdea ? '0' : '32px'
-        }}
-      >
-        {!selectedIdea && (
-          <div style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '16px', lineHeight: '1.8', fontFamily: 'Georgia, serif' }}>
-            <h3 style={{ color: '#a855f7', fontSize: '28px', marginBottom: '20px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>✨ Welcome to Mind Vault</h3>
-            <p>Select an idea from the Ideas page to start developing it, or begin writing your thoughts here...</p>
-            <br />
-            <p style={{ fontSize: '18px' }}>💡 <strong style={{ color: '#60a5fa' }}>Tip:</strong> Use the toolbar above to format text, add images, upload documents, and customize your workspace!</p>
+      {/* Editor */}
+      {selectedIdea ? (
+        <div 
+          ref={editorRef}
+          className="rich-editor min-h-[600px] border-2 border-slate-600 border-t-0 rounded-b-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/50 transition-all overflow-auto shadow-2xl backdrop-blur-sm"
+          contentEditable
+          suppressContentEditableWarning={true}
+          onPaste={handlePaste}
+          style={{
+            backgroundColor: backgroundColor,
+            color: textColor,
+            padding: selectedIdea ? '0' : '32px'
+          }}
+        >
+          {!selectedIdea && (
+            <div style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '16px', lineHeight: '1.8', fontFamily: 'Georgia, serif' }}>
+              <h3 style={{ color: '#a855f7', fontSize: '28px', marginBottom: '20px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>✨ Welcome to Mind Vault</h3>
+              <p>Select an idea from the Ideas page to start developing it, or begin writing your thoughts here...</p>
+              <br />
+              <p style={{ fontSize: '18px' }}>💡 <strong style={{ color: '#60a5fa' }}>Tip:</strong> Use the toolbar above to format text, add images, upload documents, and customize your workspace!</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rich-editor bg-slate-900 border-2 border-dashed border-slate-600 flex items-center justify-center min-h-[500px]">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">Select an Idea to Start Writing</h3>
+            <p className="text-gray-500 mb-4">
+              Choose an idea from the dropdown above to begin developing your thoughts and content.
+            </p>
+            <p className="text-sm text-gray-600">
+              💡 You can search through your ideas or create new ones from the Ideas page.
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Save Button - Bottom Right Corner */}
-      <button
-        onClick={saveContent}
-        disabled={!selectedIdea || !hasUnsavedChanges}
-        className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
-          selectedIdea && hasUnsavedChanges
-            ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
-            : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-        }`}
-        title={
-          !selectedIdea 
-            ? 'Select an idea first' 
-            : !hasUnsavedChanges 
-            ? 'No changes to save' 
-            : 'Save changes'
-        }
-      >
-        <span className="text-2xl">💾</span>
-        <span className="text-sm font-bold">Save</span>
-        {hasUnsavedChanges && selectedIdea && (
-          <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-        )}
-      </button>
+      {selectedIdea && (
+        <button
+          onClick={saveContent}
+          disabled={!selectedIdea || !hasUnsavedChanges}
+          className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+            selectedIdea && hasUnsavedChanges
+              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
+              : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+          }`}
+          title={
+            !selectedIdea 
+              ? 'Select an idea first' 
+              : !hasUnsavedChanges 
+              ? 'No changes to save' 
+              : 'Save changes'
+          }
+        >
+          <span className="text-2xl">💾</span>
+          <span className="text-sm font-bold">Save</span>
+          {hasUnsavedChanges && selectedIdea && (
+            <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+          )}
+        </button>
+      )}
 
       {/* Last Saved Indicator */}
-      {lastSaved && (
+      {lastSaved && selectedIdea && (
         <div 
           className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30"
         >
@@ -1339,6 +1408,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         accept="image/*"
         onChange={handleImageUpload}
         className="hidden"
+        disabled={!selectedIdea}
       />
       
       <input
@@ -1347,6 +1417,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         accept=".pdf,.doc,.docx,.txt,.rtf,.xls,.xlsx,.ppt,.pptx,.zip,.rar"
         onChange={handleDocumentUpload}
         className="hidden"
+        disabled={!selectedIdea}
       />
     </div>
   );
