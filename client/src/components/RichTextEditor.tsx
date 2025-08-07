@@ -10,7 +10,6 @@ const createThumbnail = async (src: string): Promise<string> => {
 
 const downloadAsPDF = async () => {
   try {
-    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF('p', 'mm', 'a4');
     
     const content = editorRef.current?.querySelector('.rich-editor');
@@ -28,8 +27,8 @@ const downloadAsPDF = async () => {
     const scale = Math.min(pdfWidth / contentWidth, pdfHeight / contentHeight) * 0.9;
     
     // Convert HTML content to canvas
-    const { toCanvas } = await import('html-to-image');
-    const canvas = await toCanvas(content, {
+    const { default: htmlToImage } = await import('html-to-image');
+    const canvas = await htmlToImage.toCanvas(content, {
       pixelRatio: 2,
       skipFonts: true,
       style: {
