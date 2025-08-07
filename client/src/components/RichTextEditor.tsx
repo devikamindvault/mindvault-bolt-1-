@@ -567,6 +567,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
   return (
     <div className="rich-text-editor relative min-h-screen">
+      {/* Add padding to prevent overlap with fixed save button */}
+      <style>{`
+        .rich-text-editor {
+          padding-right: 120px;
+        }
+        @media (max-width: 768px) {
+          .rich-text-editor {
+            padding-right: 20px;
+          }
+          .save-button-mobile {
+            right: 10px !important;
+            bottom: 10px !important;
+          }
+        }
+      `}</style>
+      
       {/* Daily Quote */}
       <div className="mb-8 p-6 bg-gradient-to-r from-indigo-900/60 via-purple-900/60 to-pink-900/60 rounded-2xl border border-indigo-400/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 animate-pulse"></div>
@@ -932,16 +948,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={saveContent}
         disabled={!selectedIdea || !hasUnsavedChanges}
-        className={`fixed bottom-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+        className={`save-button-mobile fixed p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
           selectedIdea && hasUnsavedChanges
             ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
         }`}
         style={{ 
-          right: '24px', 
+          right: '20px', 
           left: 'auto',
           position: 'fixed',
-          bottom: '24px'
+          bottom: '20px'
         }}
         title={
           !selectedIdea 
