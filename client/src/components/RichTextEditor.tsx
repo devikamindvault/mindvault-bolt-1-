@@ -339,7 +339,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       png: '🖼️',
       gif: '🖼️',
       svg: '🖼️'
-      document.removeEventListener('selectionchange', handleSelectionChange);
     };
     return iconMap[extension] || '📎';
   };
