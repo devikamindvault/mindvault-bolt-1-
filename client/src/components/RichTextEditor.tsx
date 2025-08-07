@@ -558,13 +558,21 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       {/* Idea Selection Dropdown */}
       <div className="mb-6">
         <div className="relative">
-          <button
+          <div
             onClick={() => setShowDropdown(!showDropdown)}
-            className={`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
+            className={`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 cursor-pointer ${
               selectedIdea 
                 ? 'border-purple-500 bg-gradient-to-r from-slate-800 to-purple-900/30' 
                 : 'border-slate-600 hover:border-slate-500'
             }`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowDropdown(!showDropdown);
+              }
+            }}
           >
             <div className="flex items-center gap-3">
               <Lightbulb className={`w-5 h-5 ${selectedIdea ? 'text-purple-400' : 'text-gray-400'}`} />
@@ -586,7 +594,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
               )}
               <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
             </div>
-          </button>
+          </div>
 
           {showDropdown && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-96 overflow-hidden">
