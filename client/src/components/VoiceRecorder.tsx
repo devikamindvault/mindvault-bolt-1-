@@ -86,11 +86,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
       alert('Could not access microphone. Please check permissions.');
     }
   };
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Could not access microphone. Please check permissions.');
-    }
-  };
 
   const stopRecording = () => {
     if (recognitionRef.current && isRecording) {
@@ -101,7 +96,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
       mediaRecorderRef.current.stop();
       setIsProcessing(true);
       setIsRecording(false);
-      setIsProcessing(true);
     }
   };
 
