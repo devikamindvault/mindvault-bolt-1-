@@ -1,10 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { 
-  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Smile, Palette, Undo, Redo
-} from 'lucide-react';
 import {
-  Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
+  Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, 
+  FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import jsPDF from 'jspdf';
 import VoiceRecorder from './VoiceRecorder';
 
