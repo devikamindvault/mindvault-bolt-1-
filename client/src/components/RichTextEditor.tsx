@@ -932,12 +932,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={saveContent}
         disabled={!selectedIdea || !hasUnsavedChanges}
-        className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+        className={`fixed bottom-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
           selectedIdea && hasUnsavedChanges
             ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
         }`}
-        style={{ right: '24px', left: 'auto' }}
+        style={{ 
+          right: '24px', 
+          left: 'auto',
+          position: 'fixed',
+          bottom: '24px'
+        }}
         title={
           !selectedIdea 
             ? 'Select an idea first' 
@@ -955,7 +960,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
       {/* Last Saved Indicator */}
       {lastSaved && (
-        <div className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30" style={{ right: '24px', left: 'auto' }}>
+        <div 
+          className="fixed text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30"
+          style={{ 
+            right: '24px', 
+            left: 'auto',
+            bottom: '100px',
+            position: 'fixed'
+          }}
+        >
           ✅ Last saved: {lastSaved.toLocaleTimeString()}
         </div>
       )}
