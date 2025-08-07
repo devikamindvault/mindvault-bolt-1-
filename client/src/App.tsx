@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import RichTextEditor from './components/RichTextEditor';
 import GoalPage from './components/GoalPage';
 import { Lightbulb, Home, Sparkles } from 'lucide-react';
@@ -23,7 +24,12 @@ function App() {
   useEffect(() => {
     const savedIdeas = localStorage.getItem('mindvault-ideas');
     if (savedIdeas) {
-      setIdeas(JSON.parse(savedIdeas));
+      try {
+        setIdeas(JSON.parse(savedIdeas));
+      } catch (error) {
+        console.error('Error parsing saved ideas:', error);
+        localStorage.removeItem('mindvault-ideas');
+      }
     }
   }, []);
 

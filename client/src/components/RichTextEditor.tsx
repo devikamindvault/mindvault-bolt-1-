@@ -315,29 +315,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   };
 
   const insertEmoji = (emoji: string) => {
-    if (editorRef.current) {
-      editorRef.current.focus();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const textNode = document.createTextNode(emoji);
-        range.insertNode(textNode);
-        range.setStartAfter(textNode);
-        range.setEndAfter(textNode);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } else {
-        // If no selection, append to the end
-        const textNode = document.createTextNode(emoji);
-        editorRef.current.appendChild(textNode);
-      }
+    const editor = editorRef.current;
+    if (!editor) return;
+    
+    editor.focus();
+    const selection = window.getSelection();
+    
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const textNode = document.createTextNode(emoji);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+    } else {
+      const textNode = document.createTextNode(emoji);
+      editor.appendChild(textNode);
     }
+    
     setShowEmojiPicker(false);
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const items = e.clipboardData.items;
+    const items = e.clipboardData?.items;
+    if (!items) return;
     
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -385,12 +386,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   };
 
   const downloadAsPDF = async () => {
-    if (isDownloading) return;
+    if (isDownloading || !editorRef.current) return;
     
     try {
       setIsDownloading(true);
       const content = editorRef.current;
-      if (!content) return;
       
       // Create a temporary container with better styling for PDF
       const tempContainer = document.createElement('div');

@@ -29,7 +29,12 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
   useEffect(() => {
     const savedIdeas = localStorage.getItem('mindvault-ideas');
     if (savedIdeas) {
-      setIdeas(JSON.parse(savedIdeas));
+      try {
+        setIdeas(JSON.parse(savedIdeas));
+      } catch (error) {
+        console.error('Error parsing saved ideas:', error);
+        localStorage.removeItem('mindvault-ideas');
+      }
     }
   }, []);
 
