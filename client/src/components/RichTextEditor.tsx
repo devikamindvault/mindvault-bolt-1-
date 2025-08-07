@@ -763,8 +763,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
               <button onClick={generatePreview} className="toolbar-button" title="Preview">
                 {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-              <button onClick={generatePDF} className="toolbar-button" title="Export PDF">
+             <button onClick={generatePDF} className="toolbar-button bg-red-600 hover:bg-red-700 text-white border-red-500" title="Download PDF">
                 <Download className="w-4 h-4" />
+               <span className="ml-1 text-xs font-bold">PDF</span>
               </button>
             </div>
           </div>
