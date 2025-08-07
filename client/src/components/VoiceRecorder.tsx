@@ -51,25 +51,22 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
           setIsRecording(false);
           setIsListening(false);
           
-          let errorMessage = '';
           switch (event.error) {
             case 'not-allowed':
-              errorMessage = 'Microphone access denied. Please allow microphone permissions in your browser settings and try again.';
+              alert('Microphone access denied. Please allow microphone permissions in your browser settings and refresh the page.');
               break;
             case 'no-speech':
-              errorMessage = 'No speech detected. Please try speaking again.';
+              alert('No speech detected. Please try speaking again.');
               break;
             case 'audio-capture':
-              errorMessage = 'No microphone found. Please check your microphone connection.';
+              alert('No microphone found. Please check your microphone connection.');
               break;
             case 'network':
-              errorMessage = 'Network error occurred. Please check your internet connection.';
+              alert('Network error occurred. Please check your internet connection.');
               break;
             default:
-              errorMessage = `Speech recognition error: ${event.error}. Please try again.`;
+              alert(`Speech recognition error: ${event.error}. Please try again.`);
           }
-          
-          alert(errorMessage);
         };
         
         recognition.onend = () => {
