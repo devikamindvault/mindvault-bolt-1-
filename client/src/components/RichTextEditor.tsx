@@ -69,7 +69,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           editorRef.current.innerHTML = savedContent;
         }
       } else {
-        const initialContent = `<h2>Working on: ${selectedIdea.title}</h2><p>${selectedIdea.description}</p><p><br></p>`;
+        const initialContent = `<p>${selectedIdea.description}</p><p><br></p>`;
         setContent(initialContent);
         if (editorRef.current) {
           editorRef.current.innerHTML = initialContent;
