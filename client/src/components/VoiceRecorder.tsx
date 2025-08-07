@@ -129,44 +129,41 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
   };
 
   return (
-    <div className="voice-recorder flex flex-col items-center gap-2">
+    <div className="voice-recorder flex items-center gap-2">
       {!isRecording && !isProcessing && (
         <button
           onClick={startRecording}
-          className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-110 flex items-center gap-2"
+          className="toolbar-button hover:bg-blue-600 transition-all duration-200 flex items-center gap-1"
           title="Start Voice Recording"
         >
-          <Mic className="w-6 h-6" />
-          <span className="font-bold">Voice</span>
+          <Mic className="w-4 h-4" />
         </button>
       )}
       
       {isRecording && (
         <button
           onClick={stopRecording}
-          className="p-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-110 flex items-center gap-2 animate-pulse"
+          className="toolbar-button bg-red-600 hover:bg-red-700 transition-all duration-200 flex items-center gap-1 animate-pulse"
           title="Stop Recording"
         >
-          <Square className="w-6 h-6" />
-          <span className="font-bold">Stop</span>
+          <Square className="w-4 h-4" />
         </button>
       )}
       
       {isProcessing && (
         <button
           disabled
-          className="p-4 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-2xl shadow-2xl flex items-center gap-2 cursor-not-allowed"
+          className="toolbar-button bg-gray-600 text-white flex items-center gap-1 cursor-not-allowed"
           title="Processing..."
         >
-          <MicOff className="w-6 h-6 animate-pulse" />
-          <span className="font-bold">Processing...</span>
+          <MicOff className="w-4 h-4 animate-pulse" />
         </button>
       )}
       
       {isListening && (
-        <div className="flex items-center gap-2 text-blue-400 text-sm font-medium animate-pulse">
-          <Volume2 className="w-4 h-4" />
-          <span>Listening...</span>
+        <div className="flex items-center gap-1 text-blue-400 text-xs font-medium animate-pulse">
+          <Volume2 className="w-3 h-3" />
+          <span>Listening</span>
         </div>
       )}
     </div>

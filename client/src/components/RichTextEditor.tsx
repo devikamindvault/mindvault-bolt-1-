@@ -900,6 +900,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </button>
         </div>
 
+        {/* Voice Recording */}
+        <div className="toolbar-group bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <VoiceRecorder onTranscription={handleVoiceTranscription} />
+        </div>
+
         {/* Last Saved Indicator */}
         {lastSaved && (
           <div className="text-sm text-green-300 bg-gradient-to-r from-green-900/50 to-emerald-900/50 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg">
@@ -949,11 +954,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           )}
         </button>
       )}
-
-      {/* Voice Recording Button - Bottom Left Corner */}
-      <div className="fixed bottom-6 left-6 z-50">
-        <VoiceRecorder onTranscription={handleVoiceTranscription} />
-      </div>
 
       {/* PDF Download Button - Bottom Center */}
       <button
