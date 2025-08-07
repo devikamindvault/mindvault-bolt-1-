@@ -954,7 +954,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
       {/* Last Saved Indicator */}
       {lastSaved && (
-        <div className="fixed bottom-6 right-32 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30">
+        <div className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30">
           ✅ Last saved: {lastSaved.toLocaleTimeString()}
         </div>
       )}
