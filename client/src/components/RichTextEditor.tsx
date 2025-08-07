@@ -901,42 +901,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
 
         {/* Voice Recording */}
-        <div className="toolbar-group bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <VoiceRecorder onTranscription={handleVoiceTranscription} />
         </div>
-
-        {/* Save Button */}
-        <div className="toolbar-group bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
-          <button
-            onClick={saveContent}
-            disabled={!selectedIdea || !hasUnsavedChanges}
-            className={`toolbar-button flex items-center gap-2 px-4 ${
-              selectedIdea && hasUnsavedChanges
-                ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-            }`}
-            title={
-              !selectedIdea 
-                ? 'Select an idea first' 
-                : !hasUnsavedChanges 
-                ? 'No changes to save' 
-                : 'Save changes'
-            }
-          >
-            <span className="text-lg">💾</span>
-            <span className="text-sm font-medium">Save</span>
-            {hasUnsavedChanges && selectedIdea && (
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
-            )}
-          </button>
-        </div>
-
-        {/* Last Saved Indicator */}
-        {lastSaved && (
-          <div className="text-sm text-green-300 bg-gradient-to-r from-green-900/50 to-emerald-900/50 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg">
-            ✅ Last saved: {lastSaved.toLocaleTimeString()}
-          </div>
-        )}
       </div>
       
       <div 
@@ -960,6 +927,37 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </div>
         )}
       </div>
+
+      {/* Save Button - Bottom Right Corner */}
+      <button
+        onClick={saveContent}
+        disabled={!selectedIdea || !hasUnsavedChanges}
+        className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+          selectedIdea && hasUnsavedChanges
+            ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
+            : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+        }`}
+        title={
+          !selectedIdea 
+            ? 'Select an idea first' 
+            : !hasUnsavedChanges 
+            ? 'No changes to save' 
+            : 'Save changes'
+        }
+      >
+        <span className="text-2xl">💾</span>
+        <span className="text-sm font-bold">Save</span>
+        {hasUnsavedChanges && selectedIdea && (
+          <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+        )}
+      </button>
+
+      {/* Last Saved Indicator */}
+      {lastSaved && (
+        <div className="fixed bottom-6 right-32 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30">
+          ✅ Last saved: {lastSaved.toLocaleTimeString()}
+        </div>
+      )}
 
       {/* PDF Download Button - Bottom Center */}
       <button
