@@ -317,14 +317,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add click handler for preview
-    const preview = docPreview.querySelector('.document-preview');
-    if (preview) {
-      preview.addEventListener('click', () => {
-        setModalDocument(mediaItem);
-        setShowDocumentModal(true);
-      });
-    }
+    // Add click handler for preview - use event delegation
+    docPreview.addEventListener('click', (e) => {
+      // Don't trigger if clicking delete button
+      if ((e.target as HTMLElement).classList.contains('delete-btn')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      setModalDocument(mediaItem);
+      setShowDocumentModal(true);
+    });
     
     // Insert at cursor position or at the end
     if (range) {
@@ -1120,12 +1123,23 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     href={modalDocument.url}
                     download={modalDocument.name}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Download className="w-4 h-4" />
                     Download
                   </a>
                   <button
-                    onClick={() => window.open(modalDocument.url, '_blank')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // For documents, try to open in new tab
+                      const link = document.createElement('a');
+                      link.href = modalDocument.url;
+                      link.target = '_blank';
+                      link.rel = 'noopener noreferrer';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
                     className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
