@@ -697,43 +697,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <div className="color-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Background Color</label>
-                <div className="flex gap-2 mb-2">
-                  {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        setBackgroundColor(color);
-                        localStorage.setItem('editor-bg-color', color);
-                        if (selectedIdea) {
-                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
-                        }
-                        if (editorRef.current) {
-                          editorRef.current.style.backgroundColor = color;
-                          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
-                          if (contentDiv) {
-                            (contentDiv as HTMLElement).style.background = color;
-                          }
-                      key={color}
-                      onClick={() => {
-                        setBackgroundColor(color);
-                        localStorage.setItem('editor-bg-color', color);
-                        if (selectedIdea) {
-                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
-                        }
-                        if (editorRef.current) {
-                          editorRef.current.style.backgroundColor = color;
-                          // Update the entire content background
-                          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
-                          if (contentDiv) {
-                            (contentDiv as HTMLElement).style.background = color;
-                          }
-                        }
-                      }}
-                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
+<div className="flex gap-2 mb-2">
+  {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
+    <button
+      key={color}
+      onClick={() => {
+        setBackgroundColor(color);
+        localStorage.setItem('editor-bg-color', color);
+        if (selectedIdea) {
+          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+        }
+        if (editorRef.current) {
+          editorRef.current.style.backgroundColor = color;
+          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+          if (contentDiv) {
+            (contentDiv as HTMLElement).style.background = color;
+          }
+        }
+      }}
+      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+      style={{ backgroundColor: color }}
+    />
+  ))}
+</div>
                 <input
                   type="color"
                   value={backgroundColor}
