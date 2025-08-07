@@ -1321,6 +1321,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 cursor-pointer"
           onClick={() => setShowImageModal(false)}
         >
+          <button 
+            className="image-modal-close"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImageModal(false);
+            }}
+            title="Close preview"
+          >
+            ×
+          </button>
           <div className="max-w-[90vw] max-h-[90vh] relative">
             <img 
               src={modalImageUrl} 
