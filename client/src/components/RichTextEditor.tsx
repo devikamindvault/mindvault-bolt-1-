@@ -378,15 +378,39 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           
           if (mediaItem && mediaItem.type === 'image') {
             try {
-              // Add image to PDF
-              const imgWidth = 150;
-              const imgHeight = 100;
+              // Calculate image dimensions to fit page
+              const maxWidth = pageWidth - 2 * margin;
+              const maxHeight = 120;
+              
+              // Create image element to get dimensions
+              const img = new Image();
+              img.src = mediaItem.url;
+              
+              await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              });
+              
+              let imgWidth = img.naturalWidth || maxWidth;
+              let imgHeight = img.naturalHeight || maxHeight;
+              
+              // Scale image to fit
+              const aspectRatio = imgWidth / imgHeight;
+              if (imgWidth > maxWidth) {
+                imgWidth = maxWidth;
+                imgHeight = imgWidth / aspectRatio;
+              }
+              if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = imgHeight * aspectRatio;
+              }
               
               if (yPosition + imgHeight > pageHeight - margin) {
                 pdf.addPage();
                 yPosition = margin;
               }
               
+              // Add image to PDF
               pdf.addImage(mediaItem.url, 'JPEG', margin, yPosition, imgWidth, imgHeight);
               yPosition += imgHeight + 5;
               
@@ -410,13 +434,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           const mediaItem = mediaItems.find(item => item.id === mediaId);
           
           if (mediaItem && mediaItem.type === 'document') {
+            // Add document icon and info
+            pdf.setFontSize(12);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(`📄 Document: ${mediaItem.name}`, margin, yPosition);
-            yPosition += 10;
+            pdf.text(`📄 Document Attached:`, margin, yPosition);
+            yPosition += 8;
+            
             pdf.setFont('helvetica', 'normal');
+            pdf.text(`• File Name: ${mediaItem.name}`, margin + 5, yPosition);
+            yPosition += 6;
+            pdf.text(`• File Type: ${getFileExtension(mediaItem.name).toUpperCase()}`, margin + 5, yPosition);
+            yPosition += 6;
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'italic');
+            pdf.text(`(Document content not embedded - download separately)`, margin + 5, yPosition);
+            yPosition += 12;
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(12);
           }
         } else {
-         const initialContent = `<p>${selectedIdea.description}</p><p><br></p>`;
           const textContent = element.textContent || '';
           if (textContent.trim()) {
             // Handle different text styles
@@ -429,6 +465,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             } else if (element.tagName === 'H3') {
               pdf.setFontSize(14);
               pdf.setFont('helvetica', 'bold');
+            } else if (element.tagName === 'UL' || element.tagName === 'OL') {
+              // Handle lists
+              pdf.setFontSize(12);
+              pdf.setFont('helvetica', 'normal');
+              const listItems = element.querySelectorAll('li');
+              listItems.forEach((li, index) => {
+                const bullet = element.tagName === 'UL' ? '• ' : `${index + 1}. `;
+                const lines = pdf.splitTextToSize(bullet + (li.textContent || ''), pageWidth - 2 * margin - 10);
+                
+                if (yPosition + (lines.length * 7) > pageHeight - margin) {
+                  pdf.addPage();
+                  yPosition = margin;
+                }
+                
+                pdf.text(lines, margin + 10, yPosition);
+                yPosition += lines.length * 7 + 2;
+              });
+              continue;
             } else {
               pdf.setFontSize(12);
               pdf.setFont('helvetica', 'normal');
@@ -445,6 +499,48 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             pdf.text(lines, margin, yPosition);
             yPosition += lines.length * 7 + 5;
           }
+        }
+      }
+
+      // Add media summary at the end
+      if (mediaItems.length > 0) {
+        if (yPosition > pageHeight - 100) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+        
+        yPosition += 10;
+        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 15;
+        
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Media Summary', margin, yPosition);
+        yPosition += 10;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        const images = mediaItems.filter(item => item.type === 'image');
+        const documents = mediaItems.filter(item => item.type === 'document');
+        
+        if (images.length > 0) {
+          pdf.text(`Images (${images.length}):`, margin, yPosition);
+          yPosition += 6;
+          images.forEach(img => {
+            pdf.text(`• ${img.name}`, margin + 5, yPosition);
+            yPosition += 5;
+          });
+          yPosition += 5;
+        }
+        
+        if (documents.length > 0) {
+          pdf.text(`Documents (${documents.length}):`, margin, yPosition);
+          yPosition += 6;
+          documents.forEach(doc => {
+            pdf.text(`• ${doc.name} (${getFileExtension(doc.name).toUpperCase()})`, margin + 5, yPosition);
+            yPosition += 5;
+          });
         }
       }
 
@@ -815,10 +911,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           {/* Save Button */}
           <button
             onClick={saveContent}
-            className="fixed bottom-6 right-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 z-40"
+            className="fixed bottom-6 right-20 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 z-40"
             title="Save Content"
           >
             <Save className="w-6 h-6" />
+          </button>
+
+          {/* PDF Download Button */}
+          <button
+            onClick={generatePDF}
+            className="fixed bottom-6 right-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 z-40"
+            title="Download as PDF"
+          >
+            <Download className="w-6 h-6" />
           </button>
         </>
       )}
