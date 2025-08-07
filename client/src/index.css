@@ -339,55 +339,90 @@ p, span, div {
 }
 
 /* Enhanced media preview styles */
-.media-preview-container {
-  position: relative;
-  display: block !important;
-  margin: 12px 16px 12px 0 !important;
-  float: left !important;
-  clear: left !important;
-  border: 2px solid #374151;
-  border-radius: 12px;
-  background: #1f2937;
+.image-preview-container {
+  display: inline-block;
+  margin: 10px;
   padding: 8px;
-  transition: all 0.2s ease;
-  max-width: 300px;
-  width: fit-content;
+  border: 2px solid #374151;
+  border-radius: 8px;
+  background: #1f2937;
+  position: relative;
+  max-width: 250px;
+  vertical-align: top;
 }
 
-.media-preview-container:hover {
+.image-preview-container:hover {
   border-color: #60a5fa;
   box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
 }
 
-.media-preview-container img {
-  width: 250px;
-  height: auto;
-  min-width: 120px;
-  max-width: 100%;
-  max-height: 300px;
-  object-fit: contain;
+.image-preview-container img {
+  display: block;
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s ease;
-  display: block;
-  resize: both;
-  overflow: hidden;
+  transition: transform 0.2s;
+  max-width: 100%;
+  height: auto;
 }
 
-/* Ensure text can flow around images */
-.rich-editor .media-preview-container + * {
-  margin-top: 0 !important;
-}
-
-.rich-editor p {
-  overflow: hidden;
-}
-
-.media-preview-container img:hover {
+.image-preview-container img:hover {
   transform: scale(1.05);
 }
 
-.media-preview-container .delete-btn {
+.image-caption {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+  word-break: break-word;
+}
+
+.document-preview-container {
+  display: inline-block;
+  margin: 10px;
+  position: relative;
+  vertical-align: top;
+}
+
+.document-preview {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: #374151;
+  border: 2px solid #4b5563;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.document-preview:hover {
+  border-color: #60a5fa;
+  background: #4b5563;
+}
+
+.document-icon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-name {
+  font-weight: 600;
+  color: #e5e7eb;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.document-type {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.delete-btn {
   position: absolute;
   top: -8px;
   right: -8px;
@@ -403,28 +438,11 @@ p, span, div {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
   z-index: 10;
+  transition: all 0.2s ease;
 }
 
-.media-preview-container .resize-handle {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(-45deg, transparent 30%, #60a5fa 30%, #60a5fa 70%, transparent 70%);
-  cursor: nw-resize;
-  border-radius: 0 0 8px 0;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.media-preview-container:hover .resize-handle {
-  opacity: 1;
-}
-
-.media-preview-container .delete-btn:hover {
+.delete-btn:hover {
   background: #dc2626;
   transform: scale(1.1);
 }
