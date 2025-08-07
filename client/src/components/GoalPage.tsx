@@ -191,11 +191,554 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
   };
 
   const getEditHistory = async (ideaId: string): Promise<EditEntry[]> => {
-    return await loadHistoryFromIndexedDB(ideaId);
+    try {
+      return await loadHistoryFromIndexedDB(ideaId);
+    } catch (error) {
+      console.error('Error loading edit history:', error);
+      return [];
+    }
   };
 
   const filterContentByDate = async (idea: Idea, startDate: string, endDate: string) => {
-    const history = await getEditHistory(idea.id);
+    try {
+      const history = await getEditHistory(idea.id);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // Include the entire end date
+      
+      const filteredEntries = history.filter(entry => {
+        const entryDate = new Date(entry.timestamp);
+        return entryDate >= start && entryDate <= end;
+      });
+      
+      if (filteredEntries.length === 0) {
+        return `No content found between ${startDate} and ${endDate}`;
+      }
+      
+      let content = `Content from ${startDate} to ${endDate}\n\n`;
+      filteredEntries.forEach((entry, index) => {
+        content += `--- Entry ${index + 1} (${new Date(entry.timestamp).toLocaleDateString()}) ---\n`;
+        content += `Title: ${entry.title}\n`;
+        content += `Description: ${entry.description}\n`;
+        content += `Content: ${entry.content}\n\n`;
+      });
+      
+      return content;
+    } catch (error) {
+      console.error('Error filtering content by date:', error);
+      return `Error filtering content: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  };
+
+  const handleDateFilter = async () => {
+    if (!selectedIdeaForFilter || !dateRange.start || !dateRange.end) {
+      alert('Please select an idea and both start and end dates');
+      return;
+    }
+    
+    try {
+      const content = await filterContentByDate(selectedIdeaForFilter, dateRange.start, dateRange.end);
+      setFilteredContent(content);
+      setShowDatePreview(true);
+    } catch (error) {
+      console.error('Error in date filter:', error);
+      alert('Error filtering content. Please try again.');
+    }
+  };
+
+  const downloadFilteredContent = () => {
+    if (!filteredContent || !selectedIdeaForFilter) return;
+    
+    try {
+      const blob = new Blob([filteredContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedIdeaForFilter.title}_${dateRange.start}_to_${dateRange.end}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading content:', error);
+      alert('Error downloading content. Please try again.');
+    }
+  };
+
+  const workWithFilteredContent = () => {
+    if (!selectedIdeaForFilter || !filteredContent) return;
+    
+    try {
+      // Create a new idea with the filtered content
+      const newIdea: Idea = {
+        ...selectedIdeaForFilter,
+        description: filteredContent,
+        title: `${selectedIdeaForFilter.title} (${dateRange.start} to ${dateRange.end})`
+      };
+      
+      onSelectIdea(newIdea);
+      setShowDatePreview(false);
+      setShowDateFilter(false);
+    } catch (error) {
+      console.error('Error working with filtered content:', error);
+      alert('Error processing filtered content. Please try again.');
+    }
+  };
+
+  // Sort ideas: pinned first, then by creation date
+  const sortedIdeas = [...ideas].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const truncateText = (text: string, maxLines: number = 4) => {
+    const words = text.split(' ');
+    const wordsPerLine = 12; // Approximate words per line
+    const maxWords = maxLines * wordsPerLine;
+    
+    if (words.length <= maxWords) {
+      return text;
+    }
+    
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
+
+  return (
+    <div className="ideas-page p-6">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl">
+            <Lightbulb className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Ideas</h1>
+            <p className="text-gray-400 text-sm">Capture and organize your creative thoughts</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Plus className="w-5 h-5" />
+            New Idea
+          </button>
+          <button
+            onClick={() => setShowDateFilter(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Filter className="w-5 h-5" />
+            Date Filter
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-600 p-8 rounded-2xl w-full max-w-lg shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+              <Lightbulb className="w-6 h-6 text-purple-400" />
+              {editingIdea ? 'Edit Idea' : 'Create New Idea'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
+                  placeholder="What's your idea?"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 h-32 resize-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
+                  placeholder="Describe your idea in detail..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Category</label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
+                  placeholder="e.g., Business, Creative, Personal"
+                />
+              </div>
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Target Date (Optional)</label>
+                <input
+                  type="date"
+                  value={formData.deadline}
+                  onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
+                >
+                  {editingIdea ? 'Update Idea' : 'Create Idea'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingIdea(null);
+                    setFormData({
+                      title: '',
+                      description: '',
+                      category: '',
+                      deadline: ''
+                    });
+                  }}
+                  className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-lg font-semibold transition-all duration-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Date Filter Modal */}
+      {showDateFilter && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-600 p-8 rounded-2xl w-full max-w-lg shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+              <Filter className="w-6 h-6 text-green-400" />
+              Filter Content by Date Range
+            </h2>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Select Idea</label>
+                <select
+                  value={selectedIdeaForFilter?.id || ''}
+                  onChange={(e) => {
+                    const idea = ideas.find(i => i.id === e.target.value);
+                    setSelectedIdeaForFilter(idea || null);
+                  }}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                >
+                  <option value="">Choose an idea...</option>
+                  {ideas.map(idea => (
+                    <option key={idea.id} value={idea.id}>{idea.title}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Start Date</label>
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">End Date</label>
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-20 transition-all text-lg"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-6">
+              <button
+                onClick={handleDateFilter}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              >
+                Filter & Preview
+              </button>
+              <button
+                onClick={() => {
+                  setShowDateFilter(false);
+                  setSelectedIdeaForFilter(null);
+                  setDateRange({ start: '', end: '' });
+                }}
+                className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-lg font-semibold transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Date Preview Modal */}
+      {showDatePreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg">
+                  <Calendar className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    {selectedIdeaForFilter?.title} - Date Range Content
+                  </h2>
+                  <p className="text-gray-400">
+                    {dateRange.start} to {dateRange.end}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadFilteredContent}
+                  className="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all duration-200 flex items-center gap-2"
+                  title="Download Content"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+                <button
+                  onClick={workWithFilteredContent}
+                  className="p-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-all duration-200 flex items-center gap-2"
+                  title="Work with this content"
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="hidden sm:inline">Work with this</span>
+                </button>
+                <button
+                  onClick={() => setShowDatePreview(false)}
+                  className="p-2 bg-slate-700 text-gray-300 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="prose prose-invert max-w-none">
+                <pre className="text-gray-200 leading-relaxed whitespace-pre-wrap text-base bg-slate-900 p-4 rounded-lg border border-slate-600">
+                  {filteredContent}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Preview Modal */}
+      {previewIdea && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg">
+                  <Lightbulb className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    {previewIdea.title}
+                    {previewIdea.isPinned && (
+                      <div className="bg-yellow-500 text-slate-900 p-1 rounded-full">
+                        <Pin className="w-4 h-4" />
+                      </div>
+                    )}
+                  </h2>
+                  <div className="flex items-center gap-3 mt-2">
+                    {previewIdea.category && (
+                      <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-full font-medium">
+                        {previewIdea.category}
+                      </span>
+                    )}
+                    {previewIdea.deadline && (
+                      <div className="flex items-center gap-1 text-gray-300 bg-slate-700 px-2 py-1 rounded-lg text-sm">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(previewIdea.deadline).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewIdea(null)}
+                className="p-2 bg-slate-700 text-gray-300 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="prose prose-invert max-w-none">
+                <h3 className="text-lg font-semibold text-gray-300 mb-4">Description</h3>
+                <div className="text-gray-200 leading-relaxed whitespace-pre-wrap text-base">
+                  {previewIdea.description}
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-600">
+                  <p className="text-sm text-gray-400">
+                    Created on {new Date(previewIdea.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sortedIdeas.map((idea) => (
+          <div
+            key={idea.id}
+            className={`group relative bg-slate-800 border-2 rounded-2xl p-6 hover:border-purple-500 transition-all duration-300 cursor-pointer transform hover:scale-105 hover:shadow-2xl ${
+              idea.isPinned 
+                ? 'border-yellow-500 bg-gradient-to-br from-slate-800 to-yellow-900/20' 
+                : 'border-slate-700'
+            }`}
+          >
+            {/* Pin indicator */}
+            {idea.isPinned && (
+              <div className="absolute -top-3 -right-3 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg z-10 border-2 border-yellow-400 animate-pulse">
+                <Pin className="w-4 h-4" />
+              </div>
+            )}
+
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2">
+                {idea.title}
+                {idea.isPinned && (
+                  <span className="ml-2 text-yellow-400 text-lg">📌</span>
+                )}
+              </h3>
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewIdea(idea);
+                  }}
+                  className="p-2 bg-slate-700 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all duration-200"
+                  title="Preview idea"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePin(idea.id);
+                  }}
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    idea.isPinned 
+                      ? 'bg-yellow-500 text-slate-900 hover:bg-yellow-400' 
+                      : 'bg-slate-700 text-gray-300 hover:bg-yellow-500 hover:text-slate-900'
+                  }`}
+                  title={idea.isPinned ? 'Unpin idea' : 'Pin idea'}
+                >
+                  {idea.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(idea);
+                  }}
+                  className="p-2 bg-slate-700 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg transition-all duration-200"
+                  title="Edit idea"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(idea.id);
+                  }}
+                  className="p-2 bg-slate-700 text-red-400 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200"
+                  title="Delete idea"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+              {truncateText(idea.description, 4)}
+              {idea.description.split(' ').length > 48 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewIdea(idea);
+                  }}
+                  className="ml-2 text-purple-400 hover:text-purple-300 underline text-xs"
+                >
+                  Read more
+                </button>
+              )}
+            </p>
+            
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => onSelectIdea(idea)}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105"
+              >
+                Work on this idea
+              </button>
+            </div>
+            
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-3">
+                {idea.category && (
+                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1 rounded-full font-medium">
+                    {idea.category}
+                  </span>
+                )}
+              </div>
+              {idea.deadline && (
+                <div className="flex items-center gap-1 text-gray-400 bg-slate-700 px-2 py-1 rounded-lg">
+                  <Calendar className="w-3 h-3" />
+                  <span>{new Date(idea.deadline).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 text-xs text-gray-500">
+              Created {new Date(idea.createdAt).toLocaleDateString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {ideas.length === 0 && (
+        <div className="text-center py-16">
+          <div className="bg-gradient-to-br from-purple-600 to-pink-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lightbulb className="w-12 h-12 text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-300 mb-3">No Ideas Yet</h3>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Start capturing your creative thoughts and brilliant ideas. Every great project begins with a single idea!
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            Create Your First Idea
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GoalPage;
     const start = new Date(startDate);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Include the entire end date
