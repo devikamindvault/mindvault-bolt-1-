@@ -269,13 +269,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         
         imgContainer.innerHTML = `
           <img src="${event.target?.result}" style="
-            width: 100%; 
+            width: 300px; 
             height: auto; 
+            max-width: 100%;
+            min-width: 150px;
             max-height: 400px; 
             object-fit: contain; 
             border-radius: 8px; 
             cursor: pointer;
             display: block;
+            resize: both;
+            overflow: hidden;
           " onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
           <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image" style="
             position: absolute;
@@ -295,6 +299,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             justify-content: center;
             z-index: 10;
           ">×</button>
+          <div class="resize-handle" style="
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(-45deg, transparent 30%, #60a5fa 30%, #60a5fa 70%, transparent 70%);
+            cursor: nw-resize;
+            border-radius: 0 0 8px 0;
+          "></div>
           <div class="image-modal" style="
             display: none; 
             position: fixed; 
@@ -310,6 +324,42 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
           </div>
         `;
+        
+        // Add resize functionality
+        const img = imgContainer.querySelector('img');
+        const resizeHandle = imgContainer.querySelector('.resize-handle');
+        let isResizing = false;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          isResizing = true;
+          
+          const startX = e.clientX;
+          const startY = e.clientY;
+          const startWidth = parseInt(window.getComputedStyle(img).width, 10);
+          
+          const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            
+            const width = startWidth + (e.clientX - startX);
+            const minWidth = 150;
+            const maxWidth = 800;
+            
+            if (width >= minWidth && width <= maxWidth) {
+              img.style.width = width + 'px';
+            }
+          };
+          
+          const handleMouseUp = () => {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+          };
+          
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+        });
         
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -385,13 +435,21 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove document" style="position: absolute; top: -8px; right: -8px;">×</button>
         `;
         
-        // Add click handler to download
+        // Add click handler for preview/download
         docPreview.addEventListener('click', (e) => {
           if ((e.target as HTMLElement).classList.contains('delete-btn')) return;
-          const link = document.createElement('a');
-          link.href = event.target?.result as string;
-          link.download = file.name;
-          link.click();
+          
+          // Check if it's a previewable file type
+          const previewableTypes = ['pdf', 'txt', 'doc', 'docx'];
+          if (previewableTypes.includes(fileExtension)) {
+            showDocumentPreview(file, event.target?.result as string, fileExtension);
+          } else {
+            // Download for non-previewable files
+            const link = document.createElement('a');
+            link.href = event.target?.result as string;
+            link.download = file.name;
+            link.click();
+          }
         });
         
         const selection = window.getSelection();
@@ -434,6 +492,160 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       svg: '🖼️'
     };
     return iconMap[extension] || '📎';
+  };
+
+  const showDocumentPreview = (file: File, dataUrl: string, extension: string) => {
+    // Create modal for document preview
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+      background: #1f2937;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      height: 80%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid #374151;
+    `;
+    
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 16px 20px;
+      background: #374151;
+      border-bottom: 1px solid #4b5563;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `;
+    
+    header.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: bold;">
+          ${getFileIcon(extension)}
+        </div>
+        <div>
+          <h3 style="color: white; font-size: 18px; font-weight: bold; margin: 0;">${file.name}</h3>
+          <p style="color: #9ca3af; font-size: 14px; margin: 0;">${formatFileSize(file.size)} • ${extension.toUpperCase()}</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="download-btn" style="
+          padding: 8px 16px;
+          background: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+        ">Download</button>
+        <button id="close-btn" style="
+          padding: 8px 12px;
+          background: #ef4444;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+        ">×</button>
+      </div>
+    `;
+    
+    const body = document.createElement('div');
+    body.style.cssText = `
+      flex: 1;
+      padding: 20px;
+      overflow: auto;
+      background: #111827;
+    `;
+    
+    // Handle different file types
+    if (extension === 'pdf') {
+      body.innerHTML = `
+        <iframe src="${dataUrl}" style="
+          width: 100%;
+          height: 100%;
+          border: none;
+          border-radius: 8px;
+        "></iframe>
+      `;
+    } else if (extension === 'txt') {
+      // For text files, read the content
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        body.innerHTML = `
+          <pre style="
+            color: #e5e7eb;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+          ">${e.target?.result}</pre>
+        `;
+      };
+      reader.readAsText(file);
+    } else {
+      body.innerHTML = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #9ca3af;
+          text-align: center;
+        ">
+          <div style="font-size: 48px; margin-bottom: 16px;">${getFileIcon(extension)}</div>
+          <h3 style="color: white; margin-bottom: 8px;">Preview not available</h3>
+          <p>This file type cannot be previewed in the browser.</p>
+          <p>Click the download button to save the file.</p>
+        </div>
+      `;
+    }
+    
+    content.appendChild(header);
+    content.appendChild(body);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Add event listeners
+    const closeBtn = header.querySelector('#close-btn');
+    const downloadBtn = header.querySelector('#download-btn');
+    
+    closeBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    downloadBtn?.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = file.name;
+      link.click();
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
   };
 
   const formatFileSize = (bytes: number): string => {
