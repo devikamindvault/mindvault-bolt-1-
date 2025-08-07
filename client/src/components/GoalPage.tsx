@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Lightbulb, Calendar, Pin, PinOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Lightbulb, Calendar, Pin, PinOff, Eye, X } from 'lucide-react';
 
 interface Idea {
   id: string;
@@ -19,6 +19,7 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
+  const [previewIdea, setPreviewIdea] = useState<Idea | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -36,6 +37,22 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
         localStorage.removeItem('mindvault-ideas');
       }
     }
+
+    // Listen for updates from other components
+    const handleIdeasUpdate = () => {
+      const updatedIdeas = localStorage.getItem('mindvault-ideas');
+      if (updatedIdeas) {
+        setIdeas(JSON.parse(updatedIdeas));
+      }
+    };
+
+    window.addEventListener('storage', handleIdeasUpdate);
+    window.addEventListener('ideasUpdated', handleIdeasUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleIdeasUpdate);
+      window.removeEventListener('ideasUpdated', handleIdeasUpdate);
+    };
   }, []);
 
   const saveIdeas = (updatedIdeas: Idea[]) => {
@@ -107,6 +124,17 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
+  const truncateText = (text: string, maxLines: number = 4) => {
+    const words = text.split(' ');
+    const wordsPerLine = 12; // Approximate words per line
+    const maxWords = maxLines * wordsPerLine;
+    
+    if (words.length <= maxWords) {
+      return text;
+    }
+    
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
   return (
     <div className="ideas-page p-6">
       <div className="flex justify-between items-center mb-8">
@@ -204,6 +232,68 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
           </div>
         </div>
       )}
+      {/* Preview Modal */}
+      {previewIdea && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-600 bg-gradient-to-r from-slate-800 to-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg">
+                  <Lightbulb className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    {previewIdea.title}
+                    {previewIdea.isPinned && (
+                      <div className="bg-yellow-500 text-slate-900 p-1 rounded-full">
+                        <Pin className="w-4 h-4" />
+                      </div>
+                    )}
+                  </h2>
+                  <div className="flex items-center gap-3 mt-2">
+                    {previewIdea.category && (
+                      <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-full font-medium">
+                        {previewIdea.category}
+                      </span>
+                    )}
+                    {previewIdea.deadline && (
+                      <div className="flex items-center gap-1 text-gray-300 bg-slate-700 px-2 py-1 rounded-lg text-sm">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(previewIdea.deadline).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewIdea(null)}
+                className="p-2 bg-slate-700 text-gray-300 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="prose prose-invert max-w-none">
+                <h3 className="text-lg font-semibold text-gray-300 mb-4">Description</h3>
+                <div className="text-gray-200 leading-relaxed whitespace-pre-wrap text-base">
+                  {previewIdea.description}
+                </div>
+                <div className="mt-6 pt-4 border-t border-slate-600">
+                  <p className="text-sm text-gray-400">
+                    Created on {new Date(previewIdea.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedIdeas.map((idea) => (
@@ -214,11 +304,10 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
                 ? 'border-yellow-500 bg-gradient-to-br from-slate-800 to-yellow-900/20' 
                 : 'border-slate-700'
             }`}
-            onClick={() => onSelectIdea(idea)}
           >
             {/* Pin indicator */}
             {idea.isPinned && (
-              <div className="absolute -top-3 -right-3 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg z-10 border-2 border-yellow-400">
+              <div className="absolute -top-3 -right-3 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg z-10 border-2 border-yellow-400 animate-pulse">
                 <Pin className="w-4 h-4" />
               </div>
             )}
@@ -226,8 +315,21 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2">
                 {idea.title}
+                {idea.isPinned && (
+                  <span className="ml-2 text-yellow-400 text-lg">📌</span>
+                )}
               </h3>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewIdea(idea);
+                  }}
+                  className="p-2 bg-slate-700 text-indigo-400 hover:bg-indigo-600 hover:text-white rounded-lg transition-all duration-200"
+                  title="Preview idea"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -265,9 +367,29 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
               </div>
             </div>
             
-            <p className="text-gray-300 text-sm mb-4 line-clamp-3 leading-relaxed">
-              {idea.description}
+            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+              {truncateText(idea.description, 4)}
+              {idea.description.split(' ').length > 48 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewIdea(idea);
+                  }}
+                  className="ml-2 text-purple-400 hover:text-purple-300 underline text-xs"
+                >
+                  Read more
+                </button>
+              )}
             </p>
+            
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => onSelectIdea(idea)}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105"
+              >
+                Work on this idea
+              </button>
+            </div>
             
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-3">

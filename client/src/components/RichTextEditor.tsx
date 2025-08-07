@@ -30,11 +30,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState(() => {
     return localStorage.getItem('editor-bg-color') || '#1f2937';
   });
   const [textColor, setTextColor] = useState('#ffffff');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
 
@@ -102,9 +104,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           ${selectedIdea.description}
         </p>
       `;
+      setHasUnsavedChanges(false);
     }
   }, [selectedIdea, backgroundColor, textColor]);
 
+  // Track changes in editor
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const handleInput = () => {
+      setHasUnsavedChanges(true);
+    };
+
+    editor.addEventListener('input', handleInput);
+    return () => editor.removeEventListener('input', handleInput);
+  }, [selectedIdea]);
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     // Create a simple toast notification
     const toastEl = document.createElement('div');
@@ -120,6 +135,50 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }, 3000);
   };
 
+  const saveContent = () => {
+    if (!selectedIdea || !editorRef.current) {
+      toast('No idea selected to save', 'error');
+      return;
+    }
+
+    try {
+      // Get current content from editor
+      const content = editorRef.current.innerHTML;
+      
+      // Extract title and description from content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      
+      const titleElement = tempDiv.querySelector('h1');
+      const descElement = tempDiv.querySelector('p');
+      
+      const newTitle = titleElement?.textContent || selectedIdea.title;
+      const newDescription = descElement?.textContent || selectedIdea.description;
+      
+      // Update the idea in localStorage
+      const savedIdeas = localStorage.getItem('mindvault-ideas');
+      if (savedIdeas) {
+        const ideas = JSON.parse(savedIdeas);
+        const updatedIdeas = ideas.map((idea: any) =>
+          idea.id === selectedIdea.id
+            ? { ...idea, title: newTitle, description: newDescription }
+            : idea
+        );
+        
+        localStorage.setItem('mindvault-ideas', JSON.stringify(updatedIdeas));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('ideasUpdated', { detail: updatedIdeas }));
+        
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        toast('Content saved successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving content:', error);
+      toast('Failed to save content', 'error');
+    }
+  };
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
@@ -781,6 +840,34 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <Redo className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Save Button */}
+        {selectedIdea && (
+          <div className="toolbar-group bg-slate-700 rounded-lg p-1">
+            <button
+              onClick={saveContent}
+              disabled={!hasUnsavedChanges}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                hasUnsavedChanges
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-slate-600 text-gray-400 cursor-not-allowed'
+              }`}
+              title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
+            >
+              💾 Save
+              {hasUnsavedChanges && (
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Last Saved Indicator */}
+        {lastSaved && (
+          <div className="text-xs text-gray-400 bg-slate-700 px-3 py-2 rounded-lg">
+            Last saved: {lastSaved.toLocaleTimeString()}
+          </div>
+        )}
       </div>
       
       <div 
