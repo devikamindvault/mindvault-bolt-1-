@@ -5,7 +5,7 @@ import {
   List, ListOrdered, Quote, Code, Undo, Redo, Upload, X
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import * as htmlToImage from 'html-to-image';
+import { Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search } from 'lucide-react';
 import VoiceRecorder from './VoiceRecorder';
 
 interface Idea {
@@ -33,6 +33,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [textColor, setTextColor] = useState('#f9fafb');
   const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -69,6 +70,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       }
       if (!target.closest('.idea-dropdown') && !target.closest('[data-idea-trigger]')) {
         setShowIdeaDropdown(false);
+        setSearchQuery('');
       }
     };
 
@@ -881,8 +883,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     } finally {
       setIsDownloading(false);
     }
+                <div className="p-3 border-b border-slate-600">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search ideas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                      autoFocus
+                    />
+                  </div>
+                </div>
   };
-
+                  {filteredIdeas.length === 0 ? (
+                    searchQuery ? (
+                      <div className="p-4 text-center text-gray-400">
+                        <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No ideas found matching "{searchQuery}"</p>
+                        <p className="text-sm mt-1">Try a different search term</p>
+                      </div>
+                    ) : (
   return (
     <div className="rich-text-editor relative min-h-screen">
       {/* Add padding to prevent overlap with fixed save button */}
@@ -897,13 +919,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         }
       `}</style>
       
+                    )
       {/* Daily Quote */}
-      <div className="mb-8 p-6 bg-gradient-to-r from-indigo-900/60 via-purple-900/60 to-pink-900/60 rounded-2xl border border-indigo-400/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
+                    filteredIdeas.map((idea) => (
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 animate-pulse"></div>
         <div className="flex items-center gap-3">
           <div className="text-4xl animate-bounce">💭</div>
           <div className="relative z-10">
             <p className="text-white font-medium italic text-xl leading-relaxed drop-shadow-lg">
+                          setSearchQuery('');
               "{getTodaysQuote()}"
             </p>
             <p className="text-indigo-300 text-sm mt-3 font-semibold">✨ Daily Inspiration</p>
