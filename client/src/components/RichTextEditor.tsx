@@ -2,58 +2,86 @@ import React, { useRef, useState, useEffect } from 'react';
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
   Image, Link, FileText, Smile, Palette, Download, Type,
-  List, ListOrdered, Quote, Code, Undo, Redo
+  List, ListOrdered, Quote, Code, Undo, Redo, Upload
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as htmlToImage from 'html-to-image';
 
-interface Goal {
+interface Idea {
   id: string;
   title: string;
   description: string;
   category: string;
   deadline: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'completed' | 'paused';
+  isPinned: boolean;
   createdAt: string;
 }
 
 interface RichTextEditorProps {
-  selectedGoal?: Goal | null;
+  selectedIdea?: Idea | null;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [textColor, setTextColor] = useState('#ffffff');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
 
   const stickers = ['⭐', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '💡', '🔥', '💪', '👍', '✨', '🌟', '💫', '⚡', '🚀', '🎪', '🎭', '🎨', '🎵', '🎶', '❤️', '💖', '💝', '🌈', '🦄', '🌸', '🌺', '🌻', '🌷', '🌹', '💐'];
 
   useEffect(() => {
-    if (selectedGoal && editorRef.current) {
-      const goalContent = `
-        <div style="border: 2px solid #4f46e5; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: rgba(79, 70, 229, 0.1);">
-          <h2 style="color: #6366f1; margin: 0 0 10px 0; font-size: 24px;">🎯 ${selectedGoal.title}</h2>
-          <p style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 16px;">${selectedGoal.description}</p>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; font-size: 14px;">
-            ${selectedGoal.category ? `<span style="background: #374151; color: #d1d5db; padding: 4px 8px; border-radius: 4px;">📂 ${selectedGoal.category}</span>` : ''}
-            ${selectedGoal.deadline ? `<span style="background: #374151; color: #d1d5db; padding: 4px 8px; border-radius: 4px;">📅 ${new Date(selectedGoal.deadline).toLocaleDateString()}</span>` : ''}
-            <span style="background: ${selectedGoal.priority === 'high' ? '#ef4444' : selectedGoal.priority === 'medium' ? '#f59e0b' : '#10b981'}; color: white; padding: 4px 8px; border-radius: 4px;">🔥 ${selectedGoal.priority.toUpperCase()}</span>
+    if (selectedIdea && editorRef.current) {
+      const ideaContent = `
+        <div style="border: 3px solid #8b5cf6; border-radius: 16px; padding: 24px; margin-bottom: 32px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(219, 39, 119, 0.1) 100%); position: relative;">
+          <div style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #8b5cf6, #db2777); color: white; padding: 8px; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+            ${selectedIdea.isPinned ? '📌' : '💡'}
+          </div>
+          <h2 style="color: #a855f7; margin: 0 0 16px 0; font-size: 28px; font-weight: bold; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 32px;">💡</span>
+            ${selectedIdea.title}
+          </h2>
+          <p style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6; font-style: italic;">
+            "${selectedIdea.description}"
+          </p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; margin-top: 16px;">
+            ${selectedIdea.category ? `<span style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">📂 ${selectedIdea.category}</span>` : ''}
+            ${selectedIdea.deadline ? `<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">📅 ${new Date(selectedIdea.deadline).toLocaleDateString()}</span>` : ''}
+            <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">✨ Created ${new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
-        <p>Start writing about your goal...</p>
+        <h3 style="color: #a855f7; font-size: 24px; margin: 32px 0 16px 0; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px;">📝 Development Notes</h3>
+        <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">Start developing your idea here... Add your thoughts, plans, research, and progress updates.</p>
+        <br>
+        <h3 style="color: #a855f7; font-size: 20px; margin: 24px 0 12px 0;">🎯 Key Points:</h3>
+        <ul style="color: #e2e8f0; font-size: 16px; line-height: 1.6; padding-left: 24px;">
+          <li style="margin-bottom: 8px;">What makes this idea unique?</li>
+          <li style="margin-bottom: 8px;">What resources do you need?</li>
+          <li style="margin-bottom: 8px;">What are the next steps?</li>
+        </ul>
       `;
-      editorRef.current.innerHTML = goalContent;
+      editorRef.current.innerHTML = ideaContent;
     }
-  }, [selectedGoal]);
+  }, [selectedIdea]);
 
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
-    console.log(`${type.toUpperCase()}: ${message}`);
+    // Create a simple toast notification
+    const toastEl = document.createElement('div');
+    toastEl.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 ${
+      type === 'success' ? 'bg-green-600' : 'bg-red-600'
+    }`;
+    toastEl.textContent = message;
+    document.body.appendChild(toastEl);
+    
+    setTimeout(() => {
+      toastEl.style.opacity = '0';
+      setTimeout(() => document.body.removeChild(toastEl), 300);
+    }, 3000);
   };
 
   const execCommand = (command: string, value?: string) => {
@@ -64,27 +92,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast('Image size should be less than 5MB', 'error');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = document.createElement('img');
-        img.src = event.target?.result as string;
-        img.style.maxWidth = '300px';
-        img.style.height = 'auto';
-        img.style.display = 'block';
-        img.style.margin = '10px 0';
-        img.style.borderRadius = '8px';
-        img.style.cursor = 'pointer';
-        img.style.resize = 'both';
-        img.style.overflow = 'auto';
-        
-        // Make image resizable
-        img.addEventListener('click', () => {
-          const newWidth = prompt('Enter width (px):', '300');
-          if (newWidth) {
-            img.style.width = newWidth + 'px';
-            img.style.maxWidth = 'none';
-          }
-        });
+        const img = document.createElement('div');
+        img.className = 'media-preview-container';
+        img.innerHTML = `
+          <img src="${event.target?.result}" style="width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 8px; cursor: pointer;" onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
+          <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image">×</button>
+          <div class="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;" onclick="this.style.display='none'">
+            <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
+          </div>
+        `;
         
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -95,9 +118,116 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         } else if (editorRef.current) {
           editorRef.current.appendChild(img);
         }
+        
+        toast('Image uploaded successfully!');
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast('Document size should be less than 10MB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const docPreview = document.createElement('div');
+        docPreview.className = 'document-preview-container';
+        docPreview.style.cssText = `
+          display: inline-flex;
+          align-items: center;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #374151, #4b5563);
+          border: 2px solid #6b7280;
+          border-radius: 12px;
+          margin: 8px 4px;
+          color: #e5e7eb;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          cursor: pointer;
+          position: relative;
+          max-width: 300px;
+        `;
+        
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+        const fileIcon = getFileIcon(fileExtension);
+        
+        docPreview.innerHTML = `
+          <div style="width: 32px; height: 32px; margin-right: 12px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: bold;">
+            ${fileIcon}
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 600; font-size: 14px; color: white; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${file.name}
+            </div>
+            <div style="font-size: 12px; color: #9ca3af;">
+              ${formatFileSize(file.size)} • ${fileExtension.toUpperCase()}
+            </div>
+          </div>
+          <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove document" style="position: absolute; top: -8px; right: -8px;">×</button>
+        `;
+        
+        // Add click handler to download
+        docPreview.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).classList.contains('delete-btn')) return;
+          const link = document.createElement('a');
+          link.href = event.target?.result as string;
+          link.download = file.name;
+          link.click();
+        });
+        
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.insertNode(docPreview);
+          range.setStartAfter(docPreview);
+          range.setEndAfter(docPreview);
+        } else if (editorRef.current) {
+          editorRef.current.appendChild(docPreview);
+        }
+        
+        toast('Document uploaded successfully!');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getFileIcon = (extension: string): string => {
+    const iconMap: { [key: string]: string } = {
+      pdf: '📄',
+      doc: '📝',
+      docx: '📝',
+      txt: '📄',
+      rtf: '📄',
+      xls: '📊',
+      xlsx: '📊',
+      ppt: '📊',
+      pptx: '📊',
+      zip: '📦',
+      rar: '📦',
+      mp3: '🎵',
+      mp4: '🎬',
+      avi: '🎬',
+      mov: '🎬',
+      jpg: '🖼️',
+      jpeg: '🖼️',
+      png: '🖼️',
+      gif: '🖼️',
+      svg: '🖼️'
+    };
+    return iconMap[extension] || '📎';
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const insertLink = () => {
@@ -108,9 +238,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         const link = document.createElement('a');
         link.href = url;
         link.textContent = text;
-        link.style.color = '#60a5fa';
-        link.style.textDecoration = 'underline';
+        link.style.cssText = `
+          color: #60a5fa;
+          text-decoration: underline;
+          font-weight: 500;
+          transition: color 0.2s ease;
+        `;
         link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        
+        // Add hover effect
+        link.addEventListener('mouseenter', () => {
+          link.style.color = '#93c5fd';
+        });
+        link.addEventListener('mouseleave', () => {
+          link.style.color = '#60a5fa';
+        });
         
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
@@ -119,6 +262,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
           range.setStartAfter(link);
           range.setEndAfter(link);
         }
+        
+        toast('Link inserted successfully!');
       }
     }
   };
@@ -147,15 +292,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         if (file) {
           const reader = new FileReader();
           reader.onload = (event) => {
-            const img = document.createElement('img');
-            img.src = event.target?.result as string;
-            img.style.maxWidth = '300px';
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = '10px 0';
-            img.style.borderRadius = '8px';
-            img.style.resize = 'both';
-            img.style.overflow = 'auto';
+            const img = document.createElement('div');
+            img.className = 'media-preview-container';
+            img.innerHTML = `
+              <img src="${event.target?.result}" style="width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 8px; cursor: pointer;" onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
+              <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image">×</button>
+              <div class="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;" onclick="this.style.display='none'">
+                <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
+              </div>
+            `;
             
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0) {
@@ -185,26 +330,47 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
   };
 
   const downloadAsPDF = async () => {
+    if (isDownloading) return;
+    
     try {
+      setIsDownloading(true);
       const content = editorRef.current;
       if (!content) return;
+      
+      // Create a temporary container with better styling for PDF
+      const tempContainer = document.createElement('div');
+      tempContainer.style.cssText = `
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+        width: 800px;
+        padding: 40px;
+        background: ${backgroundColor};
+        color: ${textColor};
+        font-family: 'Georgia', serif;
+        line-height: 1.6;
+      `;
+      tempContainer.innerHTML = content.innerHTML;
+      document.body.appendChild(tempContainer);
       
       const doc = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = doc.internal.pageSize.getWidth();
       const pdfHeight = doc.internal.pageSize.getHeight();
       
-      const canvas = await htmlToImage.toCanvas(content, {
+      const canvas = await htmlToImage.toCanvas(tempContainer, {
         pixelRatio: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: backgroundColor,
-        width: content.scrollWidth,
-        height: content.scrollHeight,
+        width: 800,
+        height: tempContainer.scrollHeight,
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left'
         }
       });
+      
+      document.body.removeChild(tempContainer);
       
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = pdfWidth - 20;
@@ -223,19 +389,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         heightLeft -= pdfHeight - 20;
       }
       
-      doc.save('mind-vault-document.pdf');
-      toast('Document downloaded successfully!');
+      const fileName = selectedIdea 
+        ? `${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_idea.pdf`
+        : 'mind-vault-document.pdf';
+      
+      doc.save(fileName);
+      toast('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast('Failed to generate PDF. Please try again.', 'error');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   return (
     <div className="rich-text-editor relative">
-      <div className="editor-toolbar bg-slate-700 border border-slate-600 rounded-t-lg p-3 flex flex-wrap gap-2 items-center">
+      <div className="editor-toolbar bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600 rounded-t-xl p-4 flex flex-wrap gap-3 items-center shadow-lg">
         {/* Text Formatting */}
-        <div className="toolbar-group flex gap-1">
+        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
           <button onClick={() => execCommand('bold')} className="toolbar-button" title="Bold">
             <Bold className="w-4 h-4" />
           </button>
@@ -248,7 +420,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Alignment */}
-        <div className="toolbar-group flex gap-1">
+        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
           <button onClick={() => execCommand('justifyLeft')} className="toolbar-button" title="Align Left">
             <AlignLeft className="w-4 h-4" />
           </button>
@@ -261,7 +433,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Lists */}
-        <div className="toolbar-group flex gap-1">
+        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
           <button onClick={() => execCommand('insertUnorderedList')} className="toolbar-button" title="Bullet List">
             <List className="w-4 h-4" />
           </button>
@@ -271,10 +443,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Font Size */}
-        <div className="toolbar-group">
+        <div className="toolbar-group bg-slate-700 rounded-lg p-1">
           <select 
             onChange={(e) => execCommand('fontSize', e.target.value)}
-            className="toolbar-select bg-slate-600 text-white border border-slate-500 rounded px-2 py-1 text-sm"
+            className="toolbar-select bg-slate-600 text-white border-0 rounded px-3 py-1 text-sm font-medium"
           >
             <option value="1">Small</option>
             <option value="3" selected>Normal</option>
@@ -284,13 +456,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Media */}
-        <div className="toolbar-group flex gap-1">
+        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
           <button 
             onClick={() => fileInputRef.current?.click()} 
             className="toolbar-button" 
-            title="Insert Image"
+            title="Upload Image"
           >
             <Image className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => documentInputRef.current?.click()} 
+            className="toolbar-button" 
+            title="Upload Document"
+          >
+            <Upload className="w-4 h-4" />
           </button>
           <button onClick={insertLink} className="toolbar-button" title="Insert Link">
             <Link className="w-4 h-4" />
@@ -298,7 +477,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Emoji & Stickers */}
-        <div className="toolbar-group flex gap-1 relative">
+        <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
           <button 
             onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
             className="toolbar-button" 
@@ -308,15 +487,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
           </button>
           
           {showEmojiPicker && (
-            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-lg p-3 z-50 w-80">
-              <div className="mb-3">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Emojis</h4>
+            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-96 shadow-2xl">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Smile className="w-4 h-4" />
+                  Emojis
+                </h4>
                 <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
                   {emojis.map((emoji, index) => (
                     <button
                       key={index}
                       onClick={() => insertEmoji(emoji)}
-                      className="p-1 hover:bg-slate-700 rounded text-lg"
+                      className="p-2 hover:bg-slate-700 rounded-lg text-lg transition-colors"
                     >
                       {emoji}
                     </button>
@@ -324,13 +506,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Stickers</h4>
+                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  ⭐ Stickers
+                </h4>
                 <div className="grid grid-cols-8 gap-1">
                   {stickers.map((sticker, index) => (
                     <button
                       key={index}
                       onClick={() => insertEmoji(sticker)}
-                      className="p-1 hover:bg-slate-700 rounded text-lg"
+                      className="p-2 hover:bg-slate-700 rounded-lg text-lg transition-colors"
                     >
                       {sticker}
                     </button>
@@ -342,19 +526,34 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Colors */}
-        <div className="toolbar-group flex gap-1 relative">
+        <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
           <button 
             onClick={() => setShowColorPicker(!showColorPicker)} 
             className="toolbar-button" 
-            title="Colors"
+            title="Colors & Themes"
           >
             <Palette className="w-4 h-4" />
           </button>
           
           {showColorPicker && (
-            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-lg p-3 z-50">
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-300 mb-2">Background Color</label>
+            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-300 mb-3">Background Color</label>
+                <div className="flex gap-2 mb-2">
+                  {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        setBackgroundColor(color);
+                        if (editorRef.current) {
+                          editorRef.current.style.backgroundColor = color;
+                        }
+                      }}
+                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 <input
                   type="color"
                   value={backgroundColor}
@@ -364,11 +563,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
                       editorRef.current.style.backgroundColor = e.target.value;
                     }
                   }}
-                  className="w-full h-8 rounded border border-slate-600"
+                  className="w-full h-10 rounded-lg border border-slate-600"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Text Color</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-3">Text Color</label>
+                <div className="flex gap-2 mb-2">
+                  {['#ffffff', '#e2e8f0', '#cbd5e1', '#94a3b8', '#60a5fa', '#a855f7'].map(color => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        setTextColor(color);
+                        execCommand('foreColor', color);
+                      }}
+                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 <input
                   type="color"
                   value={textColor}
@@ -376,7 +588,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
                     setTextColor(e.target.value);
                     execCommand('foreColor', e.target.value);
                   }}
-                  className="w-full h-8 rounded border border-slate-600"
+                  className="w-full h-10 rounded-lg border border-slate-600"
                 />
               </div>
             </div>
@@ -384,7 +596,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         </div>
 
         {/* Undo/Redo */}
-        <div className="toolbar-group flex gap-1">
+        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
           <button onClick={() => execCommand('undo')} className="toolbar-button" title="Undo">
             <Undo className="w-4 h-4" />
           </button>
@@ -396,7 +608,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
       
       <div 
         ref={editorRef}
-        className="rich-editor min-h-[500px] p-6 border border-slate-600 border-t-0 rounded-b-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="rich-editor min-h-[600px] p-8 border border-slate-600 border-t-0 rounded-b-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
         contentEditable
         suppressContentEditableWarning={true}
         onPaste={handlePaste}
@@ -404,20 +616,36 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
           backgroundColor: backgroundColor,
           color: textColor,
           fontSize: '16px',
-          lineHeight: '1.6',
+          lineHeight: '1.8',
           fontFamily: 'Georgia, serif'
         }}
       >
-        {!selectedGoal && <p>Start writing your thoughts...</p>}
+        {!selectedIdea && (
+          <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+            <h3 style={{ color: '#a855f7', fontSize: '24px', marginBottom: '16px' }}>✨ Welcome to Mind Vault</h3>
+            <p>Select an idea from the Ideas page to start developing it, or begin writing your thoughts here...</p>
+            <br />
+            <p>💡 <strong>Tip:</strong> Use the toolbar above to format text, add images, upload documents, and customize your workspace!</p>
+          </div>
+        )}
       </div>
 
       {/* PDF Download Button - Fixed Position */}
       <button
         onClick={downloadAsPDF}
-        className="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-lg transition-colors z-50"
-        title="Download as PDF"
+        disabled={isDownloading}
+        className={`fixed bottom-6 right-6 p-4 rounded-full shadow-2xl transition-all duration-300 z-50 ${
+          isDownloading 
+            ? 'bg-gray-600 cursor-not-allowed' 
+            : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110'
+        } text-white`}
+        title={isDownloading ? 'Generating PDF...' : 'Download as PDF'}
       >
-        <Download className="w-5 h-5" />
+        {isDownloading ? (
+          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <Download className="w-6 h-6" />
+        )}
       </button>
 
       <input
@@ -425,6 +653,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedGoal }) => {
         type="file"
         accept="image/*"
         onChange={handleImageUpload}
+        className="hidden"
+      />
+      
+      <input
+        ref={documentInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.rtf,.xls,.xlsx,.ppt,.pptx,.zip,.rar"
+        onChange={handleDocumentUpload}
         className="hidden"
       />
     </div>

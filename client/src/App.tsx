@@ -1,78 +1,102 @@
 import React, { useState } from 'react';
 import RichTextEditor from './components/RichTextEditor';
 import GoalPage from './components/GoalPage';
-import { Target, Home } from 'lucide-react';
+import { Lightbulb, Home, Sparkles } from 'lucide-react';
 import './App.css';
 
-interface Goal {
+interface Idea {
   id: string;
   title: string;
   description: string;
   category: string;
   deadline: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'completed' | 'paused';
+  isPinned: boolean;
   createdAt: string;
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'goals'>('home');
-  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [currentPage, setCurrentPage] = useState<'home' | 'ideas'>('home');
+  const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
 
-  const handleSelectGoal = (goal: Goal) => {
-    setSelectedGoal(goal);
+  const handleSelectIdea = (idea: Idea) => {
+    setSelectedIdea(idea);
     setCurrentPage('home');
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <div className="flex items-center justify-between w-full">
-          <h1 className="app-title">Mind Vault</h1>
-          <nav className="flex gap-4">
+    <div className="app-container min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700">
+      <header className="app-header bg-slate-800/50 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40">
+        <div className="flex items-center justify-between w-full p-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="app-title text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Mind Vault
+              </h1>
+              <p className="text-sm text-gray-400">Your creative idea development space</p>
+            </div>
+          </div>
+          <nav className="flex gap-3">
             <button
               onClick={() => setCurrentPage('home')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
                 currentPage === 'home' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105' 
+                  : 'bg-slate-700/50 text-gray-300 hover:bg-slate-600/50 hover:text-white'
               }`}
             >
-              <Home className="w-4 h-4" />
+              <Home className="w-5 h-5" />
               Home
             </button>
             <button
-              onClick={() => setCurrentPage('goals')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentPage === 'goals' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+              onClick={() => setCurrentPage('ideas')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
+                currentPage === 'ideas' 
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105' 
+                  : 'bg-slate-700/50 text-gray-300 hover:bg-slate-600/50 hover:text-white'
               }`}
             >
-              <Target className="w-4 h-4" />
-              Goals
+              <Lightbulb className="w-5 h-5" />
+              Ideas
             </button>
           </nav>
         </div>
-        {selectedGoal && currentPage === 'home' && (
-          <div className="mt-4 p-3 bg-indigo-900 bg-opacity-50 rounded-lg border border-indigo-500">
-            <p className="text-sm text-indigo-200">
-              Working on: <span className="font-semibold text-white">{selectedGoal.title}</span>
+        {selectedIdea && currentPage === 'home' && (
+          <div className="mx-6 mb-4 p-4 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-xl border border-purple-500/30 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm text-purple-200 font-medium">Currently developing:</span>
+                </div>
+                <span className="font-bold text-white text-lg">{selectedIdea.title}</span>
+                {selectedIdea.isPinned && (
+                  <div className="bg-yellow-500 text-slate-900 px-2 py-1 rounded-full text-xs font-bold">
+                    📌 PINNED
+                  </div>
+                )}
+              </div>
               <button
-                onClick={() => setSelectedGoal(null)}
-                className="ml-2 text-indigo-300 hover:text-white text-xs underline"
+                onClick={() => setSelectedIdea(null)}
+                className="text-purple-300 hover:text-white text-sm underline transition-colors"
               >
-                Clear
+                Clear Selection
               </button>
-            </p>
+            </div>
           </div>
         )}
       </header>
-      <main className="app-content">
+      <main className="app-content flex-1 p-6">
         {currentPage === 'home' ? (
-          <RichTextEditor selectedGoal={selectedGoal} />
+          <div className="max-w-6xl mx-auto">
+            <RichTextEditor selectedIdea={selectedIdea} />
+          </div>
         ) : (
-          <GoalPage onSelectGoal={handleSelectGoal} />
+          <div className="max-w-7xl mx-auto">
+            <GoalPage onSelectIdea={handleSelectIdea} />
+          </div>
         )}
       </main>
     </div>
