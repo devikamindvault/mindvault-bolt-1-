@@ -601,10 +601,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <div className="toolbar-group bg-slate-700 rounded-lg p-1">
           <select 
             onChange={(e) => execCommand('fontSize', e.target.value)}
+            defaultValue="3"
             className="toolbar-select bg-slate-600 text-white border-0 rounded px-3 py-1 text-sm font-medium"
           >
             <option value="1">Small</option>
-            <option value="3" selected>Normal</option>
+            <option value="3">Normal</option>
             <option value="5">Large</option>
             <option value="7">Extra Large</option>
           </select>
@@ -699,6 +700,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 <div className="flex gap-2 mb-2">
                   {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
                     <button
+                      key={color}
+                      onClick={() => {
+                        setBackgroundColor(color);
+                        localStorage.setItem('editor-bg-color', color);
+                        if (selectedIdea) {
+                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                        }
+                        if (editorRef.current) {
+                          editorRef.current.style.backgroundColor = color;
+                          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+                          if (contentDiv) {
+                            (contentDiv as HTMLElement).style.background = color;
+                          }
                       key={color}
                       onClick={() => {
                         setBackgroundColor(color);
