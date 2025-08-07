@@ -206,13 +206,9 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999); // Include the entire end date
       
-      const filteredEntries = history.filter(entry => {
-        const entryDate = new Date(entry.timestamp);
-        return entryDate >= start && entryDate <= end;
-      });
-      
       if (filteredEntries.length === 0) {
-        return `No content found between ${startDate} and ${endDate}`;
+        alert(`No content found between ${startDate} and ${endDate}`);
+        return;
       }
       
       let content = `Content from ${startDate} to ${endDate}\n\n`;
@@ -259,6 +255,11 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading date range content:', error);
+      alert('Error downloading content. Please try again.');
+    }
+  };
     } catch (error) {
       console.error('Error downloading content:', error);
       alert('Error downloading content. Please try again.');
