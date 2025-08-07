@@ -508,55 +508,56 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   };
 
   return (
-    <div className="rich-text-editor relative">
+    <div className="rich-text-editor relative min-h-screen">
       {/* Daily Quote */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-xl border border-indigo-500/30 backdrop-blur-sm">
+      <div className="mb-8 p-6 bg-gradient-to-r from-indigo-900/60 via-purple-900/60 to-pink-900/60 rounded-2xl border border-indigo-400/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 animate-pulse"></div>
         <div className="flex items-center gap-3">
-          <div className="text-2xl">💭</div>
-          <div>
-            <p className="text-indigo-200 font-medium italic text-lg leading-relaxed">
+          <div className="text-4xl animate-bounce">💭</div>
+          <div className="relative z-10">
+            <p className="text-white font-medium italic text-xl leading-relaxed drop-shadow-lg">
               "{getTodaysQuote()}"
             </p>
-            <p className="text-indigo-400 text-sm mt-2">Daily Inspiration</p>
+            <p className="text-indigo-300 text-sm mt-3 font-semibold">✨ Daily Inspiration</p>
           </div>
         </div>
       </div>
 
       {/* Idea Selection Dropdown */}
-      <div className="mb-6 relative">
+      <div className="mb-8 relative">
         <button
           data-idea-trigger
           onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
-          className="w-full p-4 bg-slate-800 border-2 border-slate-600 rounded-xl text-left flex items-center justify-between hover:border-purple-500 hover:bg-slate-700 transition-all shadow-lg"
+          className="w-full p-6 bg-gradient-to-r from-slate-800 to-slate-700 border-2 border-slate-600 rounded-2xl text-left flex items-center justify-between hover:border-purple-400 hover:from-slate-700 hover:to-slate-600 transition-all duration-300 shadow-2xl hover:shadow-purple-500/20 transform hover:scale-[1.02]"
         >
           <div className="flex items-center gap-3">
-            <div className="text-2xl">💡</div>
+            <div className="text-3xl animate-pulse">💡</div>
             <div>
-              <p className="text-white font-medium">
+              <p className="text-white font-bold text-lg">
                 {selectedIdea ? selectedIdea.title : 'Select an idea to work on'}
               </p>
               {selectedIdea && (
                 <div className="flex items-center gap-2 mt-1">
                   {selectedIdea.category && (
-                    <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
+                    <span className="px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-full font-bold shadow-lg">
                       {selectedIdea.category}
                     </span>
                   )}
                   {selectedIdea.isPinned && (
-                    <span className="text-yellow-400 text-sm">📌 Pinned</span>
+                    <span className="text-yellow-400 text-sm font-bold animate-pulse">📌 Pinned</span>
                   )}
                 </div>
               )}
             </div>
           </div>
-          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-6 h-6 text-purple-400 transition-transform duration-300 ${showIdeaDropdown ? 'rotate-180' : ''}`} />
         </button>
 
         {showIdeaDropdown && (
-          <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+          <div className="idea-dropdown absolute top-full left-0 right-0 mt-3 bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-purple-500/30 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto backdrop-blur-md">
             {ideas.length === 0 ? (
               <div className="p-6 text-center">
-                <div className="text-4xl mb-3">💡</div>
+                <div className="text-5xl mb-4 animate-bounce">💡</div>
                 <p className="text-white font-medium mb-2" style={{ color: '#ffffff !important' }}>No ideas created yet.</p>
                 <p className="text-gray-400 text-sm" style={{ color: '#9ca3af !important' }}>Go to Ideas page to create your first idea!</p>
               </div>
@@ -568,25 +569,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     onSelectIdea(idea);
                     setShowIdeaDropdown(false);
                   }}
-                  className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between group"
-                  style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
+                  className="w-full p-5 text-left hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20 transition-all duration-300 border-b border-slate-700/50 last:border-b-0 flex items-center justify-between group transform hover:scale-[1.02]"
+                  style={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', color: '#ffffff' }}
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-lg">
                       {idea.isPinned ? '📌' : '💡'}
                     </div>
                     <div>
-                      <p className="font-medium transition-colors" style={{ color: '#ffffff' }}>{idea.title}</p>
+                      <p className="font-bold text-lg transition-colors group-hover:text-purple-300" style={{ color: '#ffffff' }}>{idea.title}</p>
                       <p className="text-sm line-clamp-1 transition-colors" style={{ color: '#9ca3af' }}>{idea.description}</p>
                       {idea.category && (
-                        <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
+                        <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-bold shadow-lg">
                           {idea.category}
                         </span>
                       )}
                     </div>
                   </div>
                   {selectedIdea?.id === idea.id && (
-                    <div className="text-xl font-bold" style={{ color: '#4ade80' }}>✓</div>
+                    <div className="text-2xl font-bold animate-pulse" style={{ color: '#4ade80' }}>✓</div>
                   )}
                 </button>
               ))
@@ -595,49 +596,49 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         )}
       </div>
 
-      <div className="editor-toolbar bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600 rounded-t-xl p-4 flex flex-wrap gap-3 items-center shadow-lg">
+      <div className="editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md">
         {/* Text Formatting */}
-        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button onClick={() => execCommand('bold')} className="toolbar-button" title="Bold">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <button onClick={() => execCommand('bold')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Bold">
             <Bold className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('italic')} className="toolbar-button" title="Italic">
+          <button onClick={() => execCommand('italic')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Italic">
             <Italic className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('underline')} className="toolbar-button" title="Underline">
+          <button onClick={() => execCommand('underline')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" title="Underline">
             <Underline className="w-4 h-4" />
           </button>
         </div>
 
         {/* Alignment */}
-        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button onClick={() => execCommand('justifyLeft')} className="toolbar-button" title="Align Left">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <button onClick={() => execCommand('justifyLeft')} className="toolbar-button hover:bg-indigo-600 transition-all duration-200" title="Align Left">
             <AlignLeft className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('justifyCenter')} className="toolbar-button" title="Align Center">
+          <button onClick={() => execCommand('justifyCenter')} className="toolbar-button hover:bg-indigo-600 transition-all duration-200" title="Align Center">
             <AlignCenter className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('justifyRight')} className="toolbar-button" title="Align Right">
+          <button onClick={() => execCommand('justifyRight')} className="toolbar-button hover:bg-indigo-600 transition-all duration-200" title="Align Right">
             <AlignRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Lists */}
-        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button onClick={() => execCommand('insertUnorderedList')} className="toolbar-button" title="Bullet List">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <button onClick={() => execCommand('insertUnorderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" title="Bullet List">
             <List className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('insertOrderedList')} className="toolbar-button" title="Numbered List">
+          <button onClick={() => execCommand('insertOrderedList')} className="toolbar-button hover:bg-green-600 transition-all duration-200" title="Numbered List">
             <ListOrdered className="w-4 h-4" />
           </button>
         </div>
 
         {/* Font Size */}
-        <div className="toolbar-group bg-slate-700 rounded-lg p-1">
+        <div className="toolbar-group bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <select 
             onChange={(e) => execCommand('fontSize', e.target.value)}
             defaultValue="3"
-            className="toolbar-select bg-slate-600 text-white border-0 rounded px-3 py-1 text-sm font-medium"
+            className="toolbar-select bg-slate-600 text-white border-0 rounded-lg px-4 py-2 text-sm font-bold shadow-inner"
           >
             <option value="1">Small</option>
             <option value="3">Normal</option>
@@ -647,41 +648,41 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
 
         {/* Media */}
-        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <button 
             onClick={() => fileInputRef.current?.click()} 
-            className="toolbar-button" 
+            className="toolbar-button hover:bg-blue-600 transition-all duration-200" 
             title="Upload Image"
           >
             <Image className="w-4 h-4" />
           </button>
           <button 
             onClick={() => documentInputRef.current?.click()} 
-            className="toolbar-button" 
+            className="toolbar-button hover:bg-blue-600 transition-all duration-200" 
             title="Upload Document"
           >
             <Upload className="w-4 h-4" />
           </button>
-          <button onClick={insertLink} className="toolbar-button" title="Insert Link">
+          <button onClick={insertLink} className="toolbar-button hover:bg-blue-600 transition-all duration-200" title="Insert Link">
             <Link className="w-4 h-4" />
           </button>
         </div>
 
         {/* Emoji & Stickers */}
-        <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
+        <div className="toolbar-group flex gap-1 relative bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <button 
             data-emoji-trigger
             onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
-            className="toolbar-button" 
+            className="toolbar-button hover:bg-yellow-600 transition-all duration-200" 
             title="Insert Emoji"
           >
             <Smile className="w-4 h-4" />
           </button>
           
           {showEmojiPicker && (
-            <div className="emoji-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-96 shadow-2xl">
+            <div className="emoji-picker absolute top-full left-0 mt-3 bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 z-50 w-96 shadow-2xl backdrop-blur-md">
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Smile className="w-4 h-4" />
                   Emojis
                 </h4>
@@ -690,7 +691,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     <button
                       key={index}
                       onClick={() => insertEmoji(emoji)}
-                      className="p-2 hover:bg-slate-700 rounded-lg text-lg transition-colors"
+                      className="p-3 hover:bg-purple-600 rounded-xl text-xl transition-all duration-200 transform hover:scale-110"
                     >
                       {emoji}
                     </button>
@@ -698,7 +699,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   ⭐ Stickers
                 </h4>
                 <div className="grid grid-cols-8 gap-1">
@@ -706,7 +707,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     <button
                       key={index}
                       onClick={() => insertEmoji(sticker)}
-                      className="p-2 hover:bg-slate-700 rounded-lg text-lg transition-colors"
+                      className="p-3 hover:bg-pink-600 rounded-xl text-xl transition-all duration-200 transform hover:scale-110"
                     >
                       {sticker}
                     </button>
@@ -718,20 +719,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
 
         {/* Colors */}
-        <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
+        <div className="toolbar-group flex gap-1 relative bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <button 
             data-color-trigger
             onClick={() => setShowColorPicker(!showColorPicker)} 
-            className="toolbar-button" 
+            className="toolbar-button hover:bg-pink-600 transition-all duration-200" 
             title="Colors & Themes"
           >
             <Palette className="w-4 h-4" />
           </button>
           
           {showColorPicker && (
-            <div className="color-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
+            <div className="color-picker absolute top-full left-0 mt-3 bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 z-50 w-72 shadow-2xl backdrop-blur-md">
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-300 mb-3">Background Color</label>
+                <label className="block text-lg font-bold text-white mb-4">🎨 Background Color</label>
                 <div className="flex gap-2 mb-2">
                   {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
                     <button
@@ -750,7 +751,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                           }
                         }
                       }}
-                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+                      className="w-10 h-10 rounded-xl border-3 border-slate-500 hover:border-white transition-all duration-200 transform hover:scale-110 shadow-lg"
                       style={{ backgroundColor: color }}
                     />
                   ))}
@@ -778,11 +779,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       }
                     }
                   }}
-                  className="w-full h-10 rounded-lg border border-slate-600"
+                  className="w-full h-12 rounded-xl border-2 border-slate-500 shadow-inner"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-3">Text Color</label>
+                <label className="block text-lg font-bold text-white mb-4">✍️ Text Color</label>
                 <div className="flex gap-2 mb-2">
                   {['#ffffff', '#e2e8f0', '#cbd5e1', '#94a3b8', '#60a5fa', '#a855f7'].map(color => (
                     <button
@@ -801,7 +802,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                           if (descElement) descElement.style.color = color;
                         }
                       }}
-                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+                      className="w-10 h-10 rounded-xl border-3 border-slate-500 hover:border-white transition-all duration-200 transform hover:scale-110 shadow-lg"
                       style={{ backgroundColor: color }}
                     />
                   ))}
@@ -824,7 +825,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       if (descElement) descElement.style.color = e.target.value;
                     }
                   }}
-                  className="w-full h-10 rounded-lg border border-slate-600"
+                  className="w-full h-12 rounded-xl border-2 border-slate-500 shadow-inner"
                 />
               </div>
             </div>
@@ -832,47 +833,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
 
         {/* Undo/Redo */}
-        <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button onClick={() => execCommand('undo')} className="toolbar-button" title="Undo">
+        <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <button onClick={() => execCommand('undo')} className="toolbar-button hover:bg-orange-600 transition-all duration-200" title="Undo">
             <Undo className="w-4 h-4" />
           </button>
-          <button onClick={() => execCommand('redo')} className="toolbar-button" title="Redo">
+          <button onClick={() => execCommand('redo')} className="toolbar-button hover:bg-orange-600 transition-all duration-200" title="Redo">
             <Redo className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Save Button */}
-        {selectedIdea && (
-          <div className="toolbar-group bg-slate-700 rounded-lg p-1">
-            <button
-              onClick={saveContent}
-              disabled={!hasUnsavedChanges}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                hasUnsavedChanges
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-slate-600 text-gray-400 cursor-not-allowed'
-              }`}
-              title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
-            >
-              💾 Save
-              {hasUnsavedChanges && (
-                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              )}
-            </button>
-          </div>
-        )}
-
         {/* Last Saved Indicator */}
         {lastSaved && (
-          <div className="text-xs text-gray-400 bg-slate-700 px-3 py-2 rounded-lg">
-            Last saved: {lastSaved.toLocaleTimeString()}
+          <div className="text-sm text-green-300 bg-gradient-to-r from-green-900/50 to-emerald-900/50 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg">
+            ✅ Last saved: {lastSaved.toLocaleTimeString()}
           </div>
         )}
       </div>
       
       <div 
         ref={editorRef}
-        className="rich-editor min-h-[600px] border border-slate-600 border-t-0 rounded-b-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all overflow-auto"
+        className="rich-editor min-h-[600px] border-2 border-slate-600 border-t-0 rounded-b-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/50 transition-all overflow-auto shadow-2xl backdrop-blur-sm"
         contentEditable
         suppressContentEditableWarning={true}
         onPaste={handlePaste}
@@ -884,29 +864,49 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       >
         {!selectedIdea && (
           <div style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '16px', lineHeight: '1.8', fontFamily: 'Georgia, serif' }}>
-            <h3 style={{ color: '#a855f7', fontSize: '24px', marginBottom: '16px' }}>✨ Welcome to Mind Vault</h3>
+            <h3 style={{ color: '#a855f7', fontSize: '28px', marginBottom: '20px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>✨ Welcome to Mind Vault</h3>
             <p>Select an idea from the Ideas page to start developing it, or begin writing your thoughts here...</p>
             <br />
-            <p>💡 <strong>Tip:</strong> Use the toolbar above to format text, add images, upload documents, and customize your workspace!</p>
+            <p style={{ fontSize: '18px' }}>💡 <strong style={{ color: '#60a5fa' }}>Tip:</strong> Use the toolbar above to format text, add images, upload documents, and customize your workspace!</p>
           </div>
         )}
       </div>
+
+      {/* Save Button - Bottom Left Corner */}
+      {selectedIdea && (
+        <button
+          onClick={saveContent}
+          disabled={!hasUnsavedChanges}
+          className={`fixed bottom-6 left-6 px-6 py-4 rounded-2xl font-bold transition-all duration-300 z-50 flex items-center gap-3 shadow-2xl transform ${
+            hasUnsavedChanges
+              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hover:scale-110 animate-pulse'
+              : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
+          }`}
+          title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
+        >
+          <span className="text-2xl">💾</span>
+          <span className="text-lg">Save</span>
+          {hasUnsavedChanges && (
+            <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+          )}
+        </button>
+      )}
 
       {/* PDF Download Button - Fixed Position */}
       <button
         onClick={downloadAsPDF}
         disabled={isDownloading}
-        className={`fixed bottom-6 right-6 p-4 rounded-full shadow-2xl transition-all duration-300 z-50 ${
+        className={`fixed bottom-6 right-6 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
           isDownloading 
             ? 'bg-gray-600 cursor-not-allowed' 
-            : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110'
+            : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110 animate-bounce'
         } text-white`}
         title={isDownloading ? 'Generating PDF...' : 'Download as PDF'}
       >
         {isDownloading ? (
-          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-3 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
-          <Download className="w-6 h-6" />
+          <Download className="w-7 h-7" />
         )}
       </button>
 

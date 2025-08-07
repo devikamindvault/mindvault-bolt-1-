@@ -67,59 +67,60 @@ function App() {
       <header className="app-header bg-slate-800/50 backdrop-blur-md border-b border-slate-700 sticky top-0 z-40">
         <div className="flex items-center justify-between w-full p-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl">
-              <Sparkles className="w-8 h-8 text-white" />
+            <div className="p-3 bg-gradient-to-br from-purple-600 via-pink-600 to-indigo-600 rounded-2xl shadow-2xl animate-pulse">
+              <Sparkles className="w-10 h-10 text-white drop-shadow-lg" />
             </div>
             <div>
-              <h1 className="app-title text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="app-title text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent drop-shadow-2xl">
                 Mind Vault
               </h1>
-              <p className="text-sm text-gray-400">Your creative idea development space</p>
+              <p className="text-base text-gray-300 font-medium">✨ Your creative idea development space</p>
             </div>
           </div>
           <nav className="flex gap-3">
             <button
               onClick={() => setCurrentPage('home')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium min-w-[120px] ${
+              className={`flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 font-bold text-lg min-w-[140px] shadow-xl transform hover:scale-105 ${
                 currentPage === 'home' 
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105 border border-indigo-500' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600 hover:text-white border border-slate-600'
+                  ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-2xl border-2 border-indigo-400 animate-pulse' 
+                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border-2 border-slate-500'
               }`}
             >
-              <Home className="w-5 h-5" />
+              <Home className="w-6 h-6" />
               <span>Home</span>
             </button>
             <button
               onClick={() => setCurrentPage('ideas')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium min-w-[120px] ${
+              className={`flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 font-bold text-lg min-w-[140px] shadow-xl transform hover:scale-105 ${
                 currentPage === 'ideas' 
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105 border border-purple-500' 
-                  : 'bg-slate-700 text-gray-300 hover:bg-slate-600 hover:text-white border border-slate-600'
+                  ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white shadow-2xl border-2 border-purple-400 animate-pulse' 
+                  : 'bg-gradient-to-r from-slate-700 to-slate-600 text-gray-300 hover:from-slate-600 hover:to-slate-500 hover:text-white border-2 border-slate-500'
               }`}
             >
-              <Lightbulb className="w-5 h-5" />
+              <Lightbulb className="w-6 h-6" />
               <span>Ideas</span>
             </button>
           </nav>
         </div>
         {selectedIdea && currentPage === 'home' && (
-          <div className="mx-6 mb-4 p-4 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-xl border border-purple-500/30 backdrop-blur-sm">
+          <div className="mx-6 mb-6 p-6 bg-gradient-to-r from-purple-900/60 via-pink-900/60 to-indigo-900/60 rounded-2xl border-2 border-purple-400/40 backdrop-blur-md shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10 animate-pulse"></div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4 relative z-10">
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-purple-400" />
-                  <span className="text-sm text-purple-200 font-medium">Currently developing:</span>
+                  <Lightbulb className="w-6 h-6 text-purple-300 animate-bounce" />
+                  <span className="text-lg text-purple-200 font-bold">Currently developing:</span>
                 </div>
-                <span className="font-bold text-white text-lg">{selectedIdea.title}</span>
+                <span className="font-black text-white text-2xl drop-shadow-lg">{selectedIdea.title}</span>
                 {selectedIdea.isPinned && (
-                  <div className="bg-yellow-500 text-slate-900 px-2 py-1 rounded-full text-xs font-bold">
+                  <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 px-4 py-2 rounded-full text-sm font-black shadow-lg animate-pulse">
                     📌 PINNED
                   </div>
                 )}
               </div>
               <button
                 onClick={() => setSelectedIdea(null)}
-                className="text-purple-300 hover:text-white text-sm underline transition-colors"
+                className="text-purple-300 hover:text-white text-lg underline transition-all duration-200 font-bold relative z-10 hover:scale-110"
               >
                 Clear Selection
               </button>
