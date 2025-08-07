@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Bold, Italic, Underline, List, ListOrdered, Image, FileText, Smile, Mic, Save, Download, Eye, X, Upload, Trash2 } from 'lucide-react';
 import {
   Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, 
   FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
@@ -1393,11 +1394,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         alert('Unable to open document. Please try downloading it instead.');
                       }
                     }}
-                    className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors" 
-                    title="Download file"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
-                    Download
+                    Open File
                   </button>
                 </div>
               </div>
