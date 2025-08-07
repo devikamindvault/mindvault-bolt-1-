@@ -6,7 +6,6 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Link, Image, Upload, FileText, Download, Save, Lightbulb, ChevronDown, X, Eye, EyeOff, Search
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import htmlToImage from 'html-to-image';
 import VoiceRecorder from './VoiceRecorder';
 
 interface Idea {
@@ -921,9 +920,148 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   };
 
   return (
-    <div className="rich-text-editor relative min-h-screen">
-      {/* Add padding to prevent overlap with fixed save button */}
+    <div className="rich-text-editor max-w-7xl mx-auto p-6 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 min-h-screen">
       <style>{`
+        .toolbar-button {
+          padding: 10px 12px;
+          background: transparent;
+          color: #e2e8f0;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .toolbar-button:hover {
+          background: rgba(255, 255, 255, 0.1);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .toolbar-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .toolbar-group {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+        }
+        .toolbar-select {
+          padding: 8px 12px;
+          background: #475569;
+          color: white;
+          border: 1px solid #64748b;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          min-width: 120px;
+        }
+        .rich-editor {
+          font-family: 'Georgia', serif;
+          font-size: 16px;
+          line-height: 1.8;
+          padding: 32px;
+          min-height: 600px;
+          background: ${backgroundColor};
+          color: ${textColor};
+          border: none;
+          outline: none;
+          resize: none;
+          overflow-y: auto;
+        }
+        .rich-editor:focus {
+          outline: none;
+          box-shadow: inset 0 0 0 2px rgba(168, 85, 247, 0.4);
+        }
+        .rich-editor h1, .rich-editor h2, .rich-editor h3 {
+          margin-top: 24px;
+          margin-bottom: 16px;
+          font-weight: bold;
+        }
+        .rich-editor h1 { font-size: 32px; }
+        .rich-editor h2 { font-size: 24px; }
+        .rich-editor h3 { font-size: 20px; }
+        .rich-editor p {
+          margin-bottom: 16px;
+        }
+        .rich-editor ul, .rich-editor ol {
+          margin: 16px 0;
+          padding-left: 32px;
+        }
+        .rich-editor li {
+          margin-bottom: 8px;
+        }
+        .rich-editor a {
+          color: #60a5fa;
+          text-decoration: underline;
+        }
+        .rich-editor a:hover {
+          color: #93c5fd;
+        }
+        .rich-editor blockquote {
+          border-left: 4px solid #a855f7;
+          padding-left: 16px;
+          margin: 16px 0;
+          font-style: italic;
+          color: #cbd5e1;
+        }
+        .rich-editor img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          margin: 16px 0;
+        }
+        .rich-editor code {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+        }
+        .rich-editor pre {
+          background: rgba(255, 255, 255, 0.05);
+          padding: 16px;
+          border-radius: 8px;
+          overflow-x: auto;
+          margin: 16px 0;
+        }
+        .rich-editor pre code {
+          background: none;
+          padding: 0;
+        }
+        .media-preview-container:hover {
+          border-color: #60a5fa;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .document-preview-container:hover {
+          background: linear-gradient(135deg, #4b5563, #6b7280);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .delete-btn {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #ef4444;
+          color: white;
+          border: none;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+          transition: all 0.2s ease;
+        }
+        .delete-btn:hover {
+          background: #dc2626;
+          transform: scale(1.1);
+        }
         .rich-text-editor {
           padding-right: 20px;
         }
@@ -956,7 +1094,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <div className="relative">
           <button
             onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
-            className={`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
+            className={\`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
               selectedIdea 
                 ? 'border-purple-500 bg-gradient-to-r from-slate-800 to-purple-900/30' 
                 : 'border-slate-600 hover:border-slate-500'
@@ -991,7 +1129,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={\`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
             </div>
           </button>
 
@@ -1018,12 +1156,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     <button
                       key={idea.id}
                       onClick={() => handleIdeaSelect(idea)}
-                      className={`w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
+                      className={\`w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
                         selectedIdea?.id === idea.id ? 'bg-purple-900/30 border-purple-500' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${idea.isPinned ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
+                        <div className={\`w-2 h-2 rounded-full ${idea.isPinned ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
                         <div className="flex-1">
                           <h4 className="text-white font-semibold">{idea.title}</h4>
                           <p className="text-gray-400 text-sm mt-1 line-clamp-2">{idea.description}</p>
@@ -1052,7 +1190,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
       </div>
 
-      <div className={`editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md ${!selectedIdea ? 'opacity-50' : ''}`}>
+      <div className={\`editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md ${!selectedIdea ? 'opacity-50' : ''}`}>
         {/* Text Formatting */}
         <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <button onClick={() => execCommand('bold')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" disabled={!selectedIdea} title="Bold">
@@ -1200,7 +1338,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         setBackgroundColor(color);
                         localStorage.setItem('editor-bg-color', color);
                         if (selectedIdea) {
-                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                          localStorage.setItem(\`idea-bg-${selectedIdea.id}`, color);
                         }
                         if (editorRef.current) {
                           editorRef.current.style.backgroundColor = color;
@@ -1222,7 +1360,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setBackgroundColor(e.target.value);
                     localStorage.setItem('editor-bg-color', e.target.value);
                     if (selectedIdea) {
-                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, e.target.value);
+                      localStorage.setItem(\`idea-bg-${selectedIdea.id}`, e.target.value);
                     }
                     if (editorRef.current) {
                       editorRef.current.style.backgroundColor = e.target.value;
@@ -1251,7 +1389,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         setTextColor(color);
                         execCommand('foreColor', color);
                         if (selectedIdea) {
-                          localStorage.setItem(`idea-text-${selectedIdea.id}`, color);
+                          localStorage.setItem(\`idea-text-${selectedIdea.id}`, color);
                         }
                         // Update existing content
                         if (editorRef.current) {
@@ -1273,7 +1411,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setTextColor(e.target.value);
                     execCommand('foreColor', e.target.value);
                     if (selectedIdea) {
-                      localStorage.setItem(`idea-text-${selectedIdea.id}`, e.target.value);
+                      localStorage.setItem(\`idea-text-${selectedIdea.id}`, e.target.value);
                     }
 
                     // Update existing content
@@ -1355,7 +1493,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <button
           onClick={saveContent}
           disabled={!selectedIdea || !hasUnsavedChanges}
-          className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+          className={\`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
             selectedIdea && hasUnsavedChanges
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
               : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
@@ -1389,7 +1527,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={downloadAsPDF}
         disabled={isDownloading}
-        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
+        className={\`fixed bottom-6 left-1/2 transform -translate-x-1/2 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
           isDownloading 
             ? 'bg-gray-600 cursor-not-allowed' 
             : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110 animate-bounce'
