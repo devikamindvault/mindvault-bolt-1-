@@ -414,6 +414,49 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     handleContentChange();
   };
 
+  const insertMediaAtCursor = (mediaElement: HTMLElement) => {
+    if (!editorRef.current) return;
+
+    // Focus the editor first to ensure we have a valid selection
+    editorRef.current.focus();
+    
+    // Get current selection/cursor position
+    const selection = window.getSelection();
+    let range: Range;
+    
+    if (selection && selection.rangeCount > 0) {
+      range = selection.getRangeAt(0);
+    } else {
+      // If no selection, create one at the end of the editor
+      range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false); // Collapse to end
+    }
+
+    // Ensure we're inserting inside the editor
+    if (!editorRef.current.contains(range.commonAncestorContainer)) {
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+    }
+    
+    // Clear any existing selection
+    range.deleteContents();
+    
+    // Insert the media element at the cursor position
+    range.insertNode(mediaElement);
+    
+    // Move cursor after the inserted media element
+    range.setStartAfter(mediaElement);
+    range.setEndAfter(mediaElement);
+    
+    // Update the selection
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Trigger content change
+    handleContentChange();
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedIdea) return;
     
@@ -1321,16 +1364,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 cursor-pointer"
           onClick={() => setShowImageModal(false)}
         >
-          <button 
-            className="image-modal-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowImageModal(false);
-            }}
-            title="Close preview"
-          >
-            ×
-          </button>
           <div className="max-w-[90vw] max-h-[90vh] relative">
             <img 
               src={modalImageUrl} 
