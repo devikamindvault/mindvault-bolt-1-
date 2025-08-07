@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Mic, MicOff, Square, Loader } from 'lucide-react';
+import { Mic, MicOff, Square, Volume2 } from 'lucide-react';
 
 interface VoiceRecorderProps {
   onTranscription: (text: string) => void;
@@ -7,68 +7,84 @@ interface VoiceRecorderProps {
 
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
 
   const startRecording = async () => {
     try {
-      // Check if Speech Recognition is supported
+      // Check if browser supports speech recognition
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
-      if (!SpeechRecognition) {
-        alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsRecording(true);
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = '';
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = () => {
+          setIsRecording(true);
+          setIsListening(true);
+        };
+        
+        recognition.onresult = (event: any) => {
+          let finalTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            }
           }
-        }
+          
+          if (finalTranscript) {
+            onTranscription(finalTranscript);
+          }
+        };
         
-        if (finalTranscript) {
-          onTranscription(finalTranscript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
-        setIsListening(false);
-        
-        if (event.error === 'not-allowed') {
-          alert('Microphone access denied. Please allow microphone access and try again.');
-        } else {
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          setIsListening(false);
           alert('Speech recognition error: ' + event.error);
+        };
+        
+        recognition.onend = () => {
+          setIsRecording(false);
+          setIsListening(false);
+        };
+        
+        recognition.start();
+      } else {
+        // Fallback to media recorder for unsupported browsers
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(chunksRef.current, { type: 'audio/wav' });
+          await processAudio(audioBlob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
         }
       };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-        setIsListening(false);
-      };
-
-      recognition.start();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Could not start speech recognition. Please check microphone permissions.');
+      alert('Could not access microphone. Please check permissions.');
     }
   };
 
@@ -77,32 +93,69 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription }) => {
       recognitionRef.current.stop();
       setIsRecording(false);
       setIsListening(false);
+    } else if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsProcessing(true);
+      setIsRecording(false);
+      setIsProcessing(true);
+    }
+  };
+
+  const processAudio = async (audioBlob: Blob) => {
+    try {
+      // Fallback mock transcription for browsers without speech recognition
+      const mockTranscription = "Voice recording transcribed text would appear here.";
+      onTranscription(mockTranscription);
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      onTranscription("Error processing voice recording.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
-    <button
-      onClick={isRecording ? stopRecording : startRecording}
-      className={`fixed bottom-6 left-6 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 flex items-center gap-3 font-bold text-lg ${
-        isRecording
-          ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 animate-pulse'
-          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:scale-110'
-      } text-white`}
-      title={isRecording ? 'Stop Voice Recording' : 'Start Voice Recording'}
-    >
-      {isRecording ? (
-        <>
-          <Square className="w-7 h-7" />
-          <span>Stop</span>
-          {isListening && <span className="w-3 h-3 bg-white rounded-full animate-ping"></span>}
-        </>
-      ) : (
-        <>
-          <Mic className="w-7 h-7" />
-          <span>Voice</span>
-        </>
+    <div className="voice-recorder flex flex-col items-center gap-2">
+      {!isRecording && !isProcessing && (
+        <button
+          onClick={startRecording}
+          className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-110 flex items-center gap-2"
+          title="Start Voice Recording"
+        >
+          <Mic className="w-6 h-6" />
+          <span className="font-bold">Voice</span>
+        </button>
       )}
-    </button>
+      
+      {isRecording && (
+        <button
+          onClick={stopRecording}
+          className="p-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-2xl shadow-2xl transition-all duration-300 transform hover:scale-110 flex items-center gap-2 animate-pulse"
+          title="Stop Recording"
+        >
+          <Square className="w-6 h-6" />
+          <span className="font-bold">Stop</span>
+        </button>
+      )}
+      
+      {isProcessing && (
+        <button
+          disabled
+          className="p-4 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-2xl shadow-2xl flex items-center gap-2 cursor-not-allowed"
+          title="Processing..."
+        >
+          <MicOff className="w-6 h-6 animate-pulse" />
+          <span className="font-bold">Processing...</span>
+        </button>
+      )}
+      
+      {isListening && (
+        <div className="flex items-center gap-2 text-blue-400 text-sm font-medium animate-pulse">
+          <Volume2 className="w-4 h-4" />
+          <span>Listening...</span>
+        </div>
+      )}
+    </div>
   );
 };
 

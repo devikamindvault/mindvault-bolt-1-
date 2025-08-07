@@ -128,7 +128,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     editor.addEventListener('input', handleInput);
     document.addEventListener('selectionchange', handleSelectionChange);
     
-    return () => editor.removeEventListener('input', handleInput);
+    return () => {
+      editor.removeEventListener('input', handleInput);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
   }, [selectedIdea]);
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     // Create a simple toast notification
@@ -205,6 +208,46 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       toast('Failed to save content', 'error');
     }
   };
+
+  const handleVoiceTranscription = (transcription: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    
+    // Use the stored selection or create a new one at the end
+    let range = currentSelection;
+    if (!range) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+      } else {
+        // Create range at the end of editor content
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+      }
+    }
+
+    // Insert the transcription at the cursor position
+    const textNode = document.createTextNode(' ' + transcription + ' ');
+    range.insertNode(textNode);
+    
+    // Move cursor after the inserted text
+    range.setStartAfter(textNode);
+    range.setEndAfter(textNode);
+    
+    // Update the selection
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    
+    setHasUnsavedChanges(true);
+    toast('Voice transcription added successfully!');
+  };
+
   const execCommand = (command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
