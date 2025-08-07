@@ -237,21 +237,32 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     imagePreview.className = 'image-preview-container';
     imagePreview.setAttribute('data-media-id', mediaItem.id);
     imagePreview.innerHTML = `
-      <img src="${mediaItem.url}" alt="${mediaItem.name}" style="width: 200px; height: auto; max-height: 200px; object-fit: contain;" />
+      <div class="image-wrapper">
+        <img src="${mediaItem.url}" alt="${mediaItem.name}" class="resizable-image" style="width: 300px; height: auto; max-width: 100%; cursor: pointer;" />
+        <div class="resize-handles">
+          <div class="resize-handle resize-se"></div>
+        </div>
+      </div>
       <div class="image-caption">${mediaItem.name}</div>
       <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add click handler for preview
+    // Add click handler for modal preview
     const img = imagePreview.querySelector('img');
     if (img) {
       img.addEventListener('click', () => {
         setModalImageUrl(mediaItem.url);
         setShowImageModal(true);
       });
+      
+      // Add resize functionality
+      makeImageResizable(img, imagePreview);
     }
     
+    // Insert with proper spacing
+    const br = document.createElement('br');
     editorRef.current.appendChild(imagePreview);
+    editorRef.current.appendChild(br);
     handleContentChange();
   };
 
