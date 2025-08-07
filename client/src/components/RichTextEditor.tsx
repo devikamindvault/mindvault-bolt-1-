@@ -166,7 +166,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   // IndexedDB functions for storing large media files
   const saveMediaToIndexedDB = async (ideaId: string, mediaItems: MediaItem[]) => {
     try {
-      const request = indexedDB.open('IdeaMediaDB', 1);
+      const request = indexedDB.open('IdeaMediaDB', 2);
       
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
@@ -200,7 +200,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const loadMediaFromIndexedDB = async (ideaId: string): Promise<MediaItem[]> => {
     return new Promise((resolve) => {
       try {
-        const request = indexedDB.open('IdeaMediaDB', 1);
+        const request = indexedDB.open('IdeaMediaDB', 2);
+        
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('media')) {
+            db.createObjectStore('media', { keyPath: 'id' });
+          }
+        };
         
         request.onsuccess = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
