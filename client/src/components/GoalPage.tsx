@@ -132,43 +132,43 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Title</label>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
                   placeholder="What's your idea?"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Description</label>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 h-24 resize-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 h-32 resize-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
                   placeholder="Describe your idea in detail..."
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Category</label>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Category</label>
                 <input
                   type="text"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
                   placeholder="e.g., Business, Creative, Personal"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Target Date (Optional)</label>
+                <label className="block text-lg font-semibold text-gray-300 mb-3">Target Date (Optional)</label>
                 <input
                   type="date"
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                  className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all"
+                  className="w-full p-4 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-all text-lg"
                 />
               </div>
               <div className="flex gap-3 pt-4">
@@ -213,7 +213,7 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
           >
             {/* Pin indicator */}
             {idea.isPinned && (
-              <div className="absolute -top-2 -right-2 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg">
+              <div className="absolute -top-3 -right-3 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg z-10 border-2 border-yellow-400">
                 <Pin className="w-4 h-4" />
               </div>
             )}

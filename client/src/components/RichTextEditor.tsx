@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  Image, Link, FileText, Smile, Palette, Download, Type,
-  List, ListOrdered, Quote, Code, Undo, Redo, Upload
+  Image, Link, FileText, Smile, Palette, Download, Type, ChevronDown,
+  List, ListOrdered, Quote, Code, Undo, Redo, Upload, X
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as htmlToImage from 'html-to-image';
@@ -19,14 +19,17 @@ interface Idea {
 
 interface RichTextEditorProps {
   selectedIdea?: Idea | null;
+  ideas: Idea[];
+  onSelectIdea: (idea: Idea) => void;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, onSelectIdea }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [textColor, setTextColor] = useState('#ffffff');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -34,6 +37,49 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
 
   const stickers = ['⭐', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '💡', '🔥', '💪', '👍', '✨', '🌟', '💫', '⚡', '🚀', '🎪', '🎭', '🎨', '🎵', '🎶', '❤️', '💖', '💝', '🌈', '🦄', '🌸', '🌺', '🌻', '🌷', '🌹', '💐'];
+
+  const dailyQuotes = [
+    "The way to get started is to quit talking and begin doing. - Walt Disney",
+    "Innovation distinguishes between a leader and a follower. - Steve Jobs",
+    "Your limitation—it's only your imagination.",
+    "Great things never come from comfort zones.",
+    "Dream it. Wish it. Do it.",
+    "Success doesn't just find you. You have to go out and get it.",
+    "The harder you work for something, the greater you'll feel when you achieve it.",
+    "Don't stop when you're tired. Stop when you're done.",
+    "Wake up with determination. Go to bed with satisfaction.",
+    "Do something today that your future self will thank you for.",
+    "Little things make big days.",
+    "It's going to be hard, but hard does not mean impossible.",
+    "Don't wait for opportunity. Create it.",
+    "Sometimes we're tested not to show our weaknesses, but to discover our strengths.",
+    "The key to success is to focus on goals, not obstacles."
+  ];
+
+  const getTodaysQuote = () => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+    return dailyQuotes[dayOfYear % dailyQuotes.length];
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.emoji-picker') && !target.closest('[data-emoji-trigger]')) {
+        setShowEmojiPicker(false);
+      }
+      if (!target.closest('.color-picker') && !target.closest('[data-color-trigger]')) {
+        setShowColorPicker(false);
+      }
+      if (!target.closest('.idea-dropdown') && !target.closest('[data-idea-trigger]')) {
+        setShowIdeaDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (selectedIdea && editorRef.current) {
@@ -269,13 +315,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
   };
 
   const insertEmoji = (emoji: string) => {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const textNode = document.createTextNode(emoji);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
+    if (editorRef.current) {
+      editorRef.current.focus();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const textNode = document.createTextNode(emoji);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // If no selection, append to the end
+        const textNode = document.createTextNode(emoji);
+        editorRef.current.appendChild(textNode);
+      }
     }
     setShowEmojiPicker(false);
   };
@@ -405,6 +460,81 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
 
   return (
     <div className="rich-text-editor relative">
+      {/* Daily Quote */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-xl border border-indigo-500/30 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">💭</div>
+          <div>
+            <p className="text-indigo-200 font-medium italic text-lg leading-relaxed">
+              "{getTodaysQuote()}"
+            </p>
+            <p className="text-indigo-400 text-sm mt-2">Daily Inspiration</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Idea Selection Dropdown */}
+      <div className="mb-6 relative">
+        <button
+          data-idea-trigger
+          onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
+          className="w-full p-4 bg-slate-800 border border-slate-600 rounded-xl text-left flex items-center justify-between hover:border-purple-500 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">💡</div>
+            <div>
+              <p className="text-white font-medium">
+                {selectedIdea ? selectedIdea.title : 'Select an idea to work on'}
+              </p>
+              {selectedIdea && (
+                <p className="text-gray-400 text-sm">{selectedIdea.category}</p>
+              )}
+            </div>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showIdeaDropdown && (
+          <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+            {ideas.length === 0 ? (
+              <div className="p-4 text-center text-gray-400">
+                <p>No ideas created yet.</p>
+                <p className="text-sm">Go to Ideas page to create your first idea!</p>
+              </div>
+            ) : (
+              ideas.map((idea) => (
+                <button
+                  key={idea.id}
+                  onClick={() => {
+                    onSelectIdea(idea);
+                    setShowIdeaDropdown(false);
+                  }}
+                  className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-lg">
+                      {idea.isPinned ? '📌' : '💡'}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{idea.title}</p>
+                      <p className="text-gray-400 text-sm line-clamp-1">{idea.description}</p>
+                      {idea.category && (
+                        <span className="inline-block mt-1 px-2 py-1 bg-purple-600 text-white text-xs rounded-full">
+                          {idea.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {selectedIdea?.id === idea.id && (
+                    <div className="text-green-400">✓</div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="editor-toolbar bg-gradient-to-r from-slate-800 to-slate-700 border border-slate-600 rounded-t-xl p-4 flex flex-wrap gap-3 items-center shadow-lg">
         {/* Text Formatting */}
         <div className="toolbar-group flex gap-1 bg-slate-700 rounded-lg p-1">
@@ -479,6 +609,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
         {/* Emoji & Stickers */}
         <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
           <button 
+            data-emoji-trigger
             onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
             className="toolbar-button" 
             title="Insert Emoji"
@@ -487,7 +618,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
           </button>
           
           {showEmojiPicker && (
-            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-96 shadow-2xl">
+            <div className="emoji-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-96 shadow-2xl">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
                   <Smile className="w-4 h-4" />
@@ -528,6 +659,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
         {/* Colors */}
         <div className="toolbar-group flex gap-1 relative bg-slate-700 rounded-lg p-1">
           <button 
+            data-color-trigger
             onClick={() => setShowColorPicker(!showColorPicker)} 
             className="toolbar-button" 
             title="Colors & Themes"
@@ -536,7 +668,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea }) => {
           </button>
           
           {showColorPicker && (
-            <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
+            <div className="color-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Background Color</label>
                 <div className="flex gap-2 mb-2">

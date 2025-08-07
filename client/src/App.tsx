@@ -17,6 +17,39 @@ interface Idea {
 function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'ideas'>('home');
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+
+  // Load ideas from localStorage on component mount
+  useEffect(() => {
+    const savedIdeas = localStorage.getItem('mindvault-ideas');
+    if (savedIdeas) {
+      setIdeas(JSON.parse(savedIdeas));
+    }
+  }, []);
+
+  // Listen for changes in localStorage to sync ideas
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedIdeas = localStorage.getItem('mindvault-ideas');
+      if (savedIdeas) {
+        setIdeas(JSON.parse(savedIdeas));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom events when ideas are updated
+    const handleIdeasUpdate = (event: CustomEvent) => {
+      setIdeas(event.detail);
+    };
+
+    window.addEventListener('ideasUpdated', handleIdeasUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ideasUpdated', handleIdeasUpdate as EventListener);
+    };
+  }, []);
 
   const handleSelectIdea = (idea: Idea) => {
     setSelectedIdea(idea);
@@ -91,7 +124,11 @@ function App() {
       <main className="app-content flex-1 p-6">
         {currentPage === 'home' ? (
           <div className="max-w-6xl mx-auto">
-            <RichTextEditor selectedIdea={selectedIdea} />
+            <RichTextEditor 
+              selectedIdea={selectedIdea} 
+              ideas={ideas}
+              onSelectIdea={handleSelectIdea}
+            />
           </div>
         ) : (
           <div className="max-w-7xl mx-auto">
