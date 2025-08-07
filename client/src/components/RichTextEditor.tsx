@@ -528,9 +528,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   key={idea.id}
                   onClick={() => {
                     onSelectIdea(idea);
-                    localStorage.setItem('editor-bg-color', color);
+                    localStorage.setItem('editor-bg-color', backgroundColor);
                     if (selectedIdea) {
-                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, backgroundColor);
                     }
                     setShowIdeaDropdown(false);
                   }}
@@ -699,6 +699,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 <div className="flex gap-2 mb-2">
                   {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
                     <button
+                      key={color}
+                      onClick={() => {
+                        setBackgroundColor(color);
+                        localStorage.setItem('editor-bg-color', color);
+                        if (selectedIdea) {
+                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                        }
+                        if (editorRef.current) {
+                          editorRef.current.style.backgroundColor = color;
+                          // Update the entire content background
+                          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+                          if (contentDiv) {
+                            (contentDiv as HTMLElement).style.background = color;
+                          }
                         }
                       }}
                       className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
@@ -721,11 +735,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
                       if (contentDiv) {
                         (contentDiv as HTMLElement).style.background = e.target.value;
-                      }
-                      // Update the entire content background
-                      const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
-                      if (contentDiv) {
-                        (contentDiv as HTMLElement).style.background = color;
                       }
                     }
                   }}
