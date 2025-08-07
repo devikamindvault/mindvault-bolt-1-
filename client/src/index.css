@@ -349,6 +349,9 @@ p, span, div {
   position: relative;
   max-width: 250px;
   vertical-align: top;
+  user-select: none;
+  clear: both;
+  float: none;
 }
 
 .image-preview-container:hover {
@@ -363,6 +366,7 @@ p, span, div {
   transition: transform 0.2s;
   max-width: 100%;
   height: auto;
+  pointer-events: auto;
 }
 
 .image-preview-container img:hover {
@@ -375,6 +379,7 @@ p, span, div {
   color: #9ca3af;
   text-align: center;
   word-break: break-word;
+  pointer-events: none;
 }
 
 .document-preview-container {
@@ -382,6 +387,9 @@ p, span, div {
   margin: 10px;
   position: relative;
   vertical-align: top;
+  user-select: none;
+  clear: both;
+  float: none;
 }
 
 .document-preview {
@@ -478,18 +486,18 @@ p, span, div {
 
 /* Fix for media containers in editor */
 .rich-editor .media-preview-container {
-  margin: 20px 0;
+  margin: 20px 0 !important;
   clear: both;
   user-select: none;
   line-height: normal;
-  display: block;
+  display: block !important;
   width: fit-content;
 }
 
 /* Ensure proper spacing around media in editor */
 .rich-editor .image-preview-container + *,
 .rich-editor .document-preview-container + * {
-  margin-top: 20px;
+  margin-top: 20px !important;
   display: block;
   clear: both;
 }
@@ -497,10 +505,12 @@ p, span, div {
 /* Prevent text wrapping around media */
 .rich-editor .image-preview-container,
 .rich-editor .document-preview-container {
-  display: block;
+  display: block !important;
   float: none;
   clear: both;
-  margin: 20px 0;
+  margin: 20px 0 !important;
+  position: relative;
+  z-index: 1;
 }
 
 /* Ensure line breaks after media */
@@ -510,6 +520,26 @@ p, span, div {
   display: block;
   clear: both;
   height: 0;
+}
+
+/* Prevent text from overlapping media */
+.rich-editor .image-preview-container,
+.rich-editor .document-preview-container {
+  isolation: isolate;
+}
+
+/* Make media containers non-editable but allow interaction */
+.rich-editor [contenteditable="false"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.rich-editor [contenteditable="false"] img,
+.rich-editor [contenteditable="false"] .document-preview {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Link styles in editor */

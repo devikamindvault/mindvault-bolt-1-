@@ -233,9 +233,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const insertImagePreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
+    // Create a new paragraph to ensure proper positioning
+    const currentSelection = window.getSelection();
+    const range = currentSelection?.getRangeAt(0);
+    
+    // If there's a selection, insert at cursor position
+    if (range) {
+      range.deleteContents();
+    }
+    
     const imagePreview = document.createElement('div');
     imagePreview.className = 'image-preview-container';
     imagePreview.setAttribute('data-media-id', mediaItem.id);
+    imagePreview.contentEditable = 'false'; // Prevent editing of media container
     imagePreview.innerHTML = `
       <div class="image-wrapper">
         <img src="${mediaItem.url}" alt="${mediaItem.name}" class="resizable-image" style="width: 300px; height: auto; max-width: 100%; cursor: pointer;" />
@@ -259,19 +269,43 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       makeImageResizable(img, imagePreview);
     }
     
-    // Insert with proper spacing
-    const br = document.createElement('br');
-    editorRef.current.appendChild(imagePreview);
-    editorRef.current.appendChild(br);
+    // Insert at cursor position or at the end
+    if (range) {
+      range.insertNode(imagePreview);
+      // Add line breaks for proper spacing
+      const afterBr = document.createElement('br');
+      const beforeBr = document.createElement('br');
+      range.collapse(false);
+      range.insertNode(afterBr);
+      range.insertNode(beforeBr);
+    } else {
+      // Insert at the end with proper spacing
+      const br1 = document.createElement('br');
+      const br2 = document.createElement('br');
+      editorRef.current.appendChild(br1);
+      editorRef.current.appendChild(imagePreview);
+      editorRef.current.appendChild(br2);
+    }
+    
     handleContentChange();
   };
 
   const insertDocumentPreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
+    // Create a new paragraph to ensure proper positioning
+    const currentSelection = window.getSelection();
+    const range = currentSelection?.getRangeAt(0);
+    
+    // If there's a selection, insert at cursor position
+    if (range) {
+      range.deleteContents();
+    }
+    
     const docPreview = document.createElement('div');
     docPreview.className = 'document-preview-container';
     docPreview.setAttribute('data-media-id', mediaItem.id);
+    docPreview.contentEditable = 'false'; // Prevent editing of media container
     docPreview.innerHTML = `
       <div class="document-preview">
         <div class="document-icon">📄</div>
@@ -292,7 +326,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       });
     }
     
-    editorRef.current.appendChild(docPreview);
+    // Insert at cursor position or at the end
+    if (range) {
+      range.insertNode(docPreview);
+      // Add line breaks for proper spacing
+      const afterBr = document.createElement('br');
+      const beforeBr = document.createElement('br');
+      range.collapse(false);
+      range.insertNode(afterBr);
+      range.insertNode(beforeBr);
+    } else {
+      // Insert at the end with proper spacing
+      const br1 = document.createElement('br');
+      const br2 = document.createElement('br');
+      editorRef.current.appendChild(br1);
+      editorRef.current.appendChild(docPreview);
+      editorRef.current.appendChild(br2);
+    }
+    
     handleContentChange();
   };
 
