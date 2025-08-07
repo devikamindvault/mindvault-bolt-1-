@@ -258,6 +258,11 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       a.download = `${selectedIdeaForFilter.title}_${dateRange.start}_to_${dateRange.end}.txt`;
       document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading filtered content:', error);
+      alert('Error downloading file. Please try again.');
     }
   };
 
