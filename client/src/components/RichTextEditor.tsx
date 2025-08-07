@@ -126,7 +126,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   }, [selectedIdea]);
 
   // Save content and media
-  const saveContent = () => {
+  const saveContent = async () => {
     if (!selectedIdea || !editorRef.current) return;
 
     const currentContent = editorRef.current.innerHTML;
@@ -160,7 +160,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
     
     // Save to edit history
-    const history = getEditHistory(selectedIdea.id);
+    const history = await getEditHistory(selectedIdea.id);
     const newEntry: EditEntry = {
       id: Date.now().toString(),
       content: currentContent,
@@ -170,7 +170,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     };
     
     const updatedHistory = [newEntry, ...history].slice(0, 50); // Keep last 50 entries
-    localStorage.setItem(`idea-history-${selectedIdea.id}`, JSON.stringify(updatedHistory));
+    await saveHistoryToIndexedDB(selectedIdea.id, updatedHistory);
     
     // Dispatch event to notify other components
     window.dispatchEvent(new CustomEvent('ideasUpdated', { detail: ideas }));
@@ -179,12 +179,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   // IndexedDB functions for storing large media files
   const saveMediaToIndexedDB = async (ideaId: string, mediaItems: MediaItem[]) => {
     try {
-      const request = indexedDB.open('IdeaMediaDB', 2);
+      const request = indexedDB.open('IdeaMediaDB', 3);
       
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains('media')) {
           db.createObjectStore('media', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('history')) {
+          db.createObjectStore('history', { keyPath: 'id' });
         }
       };
       
@@ -213,12 +216,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const loadMediaFromIndexedDB = async (ideaId: string): Promise<MediaItem[]> => {
     return new Promise((resolve) => {
       try {
-        const request = indexedDB.open('IdeaMediaDB', 2);
+        const request = indexedDB.open('IdeaMediaDB', 3);
         
         request.onupgradeneeded = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
           if (!db.objectStoreNames.contains('media')) {
             db.createObjectStore('media', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('history')) {
+            db.createObjectStore('history', { keyPath: 'id' });
           }
         };
         
@@ -250,17 +256,107 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       }
     });
   };
-  const getEditHistory = (ideaId: string): EditEntry[] => {
-    const history = localStorage.getItem(`idea-history-${ideaId}`);
-    return history ? JSON.parse(history) : [];
+
+  const saveHistoryToIndexedDB = async (ideaId: string, history: EditEntry[]) => {
+    try {
+      const request = indexedDB.open('IdeaMediaDB', 3);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains('media')) {
+          db.createObjectStore('media', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('history')) {
+          db.createObjectStore('history', { keyPath: 'id' });
+        }
+      };
+      
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const transaction = db.transaction(['history'], 'readwrite');
+        const store = transaction.objectStore('history');
+        
+        const historyData = {
+          id: `idea-${ideaId}`,
+          entries: history
+        };
+        
+        // Use put to update existing or create new
+        store.put(historyData);
+      };
+    } catch (error) {
+      console.error('Error saving history to IndexedDB:', error);
+    }
+  };
+
+  const loadHistoryFromIndexedDB = async (ideaId: string): Promise<EditEntry[]> => {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open('IdeaMediaDB', 3);
+        
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('media')) {
+            db.createObjectStore('media', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('history')) {
+            db.createObjectStore('history', { keyPath: 'id' });
+          }
+        };
+        
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction(['history'], 'readonly');
+          const store = transaction.objectStore('history');
+          const getRequest = store.get(`idea-${ideaId}`);
+          
+          getRequest.onsuccess = () => {
+            if (getRequest.result) {
+              resolve(getRequest.result.entries);
+            } else {
+              // Try to migrate from localStorage if exists
+              const legacyHistory = localStorage.getItem(`idea-history-${ideaId}`);
+              if (legacyHistory) {
+                try {
+                  const parsed = JSON.parse(legacyHistory);
+                  // Save to IndexedDB and remove from localStorage
+                  saveHistoryToIndexedDB(ideaId, parsed);
+                  localStorage.removeItem(`idea-history-${ideaId}`);
+                  resolve(parsed);
+                } catch (e) {
+                  resolve([]);
+                }
+              } else {
+                resolve([]);
+              }
+            }
+          };
+          
+          getRequest.onerror = () => {
+            resolve([]);
+          };
+        };
+        
+        request.onerror = () => {
+          resolve([]);
+        };
+      } catch (error) {
+        console.error('Error loading history from IndexedDB:', error);
+        resolve([]);
+      }
+    });
+  };
+
+  const getEditHistory = async (ideaId: string): Promise<EditEntry[]> => {
+    return await loadHistoryFromIndexedDB(ideaId);
   };
 
   // Auto-save functionality
   useEffect(() => {
     if (!selectedIdea) return;
 
-    const autoSave = setTimeout(() => {
-      saveContent();
+    const autoSave = setTimeout(async () => {
+      await saveContent();
     }, 2000);
 
     return () => clearTimeout(autoSave);

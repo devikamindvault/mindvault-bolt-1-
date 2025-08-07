@@ -134,13 +134,68 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
     saveIdeas(updatedIdeas);
   };
 
-  const getEditHistory = (ideaId: string): EditEntry[] => {
-    const history = localStorage.getItem(`idea-history-${ideaId}`);
-    return history ? JSON.parse(history) : [];
+  const loadHistoryFromIndexedDB = async (ideaId: string): Promise<EditEntry[]> => {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open('IdeaMediaDB', 3);
+        
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('media')) {
+            db.createObjectStore('media', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('history')) {
+            db.createObjectStore('history', { keyPath: 'id' });
+          }
+        };
+        
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction(['history'], 'readonly');
+          const store = transaction.objectStore('history');
+          const getRequest = store.get(`idea-${ideaId}`);
+          
+          getRequest.onsuccess = () => {
+            if (getRequest.result) {
+              resolve(getRequest.result.entries);
+            } else {
+              // Try to migrate from localStorage if exists
+              const legacyHistory = localStorage.getItem(`idea-history-${ideaId}`);
+              if (legacyHistory) {
+                try {
+                  const parsed = JSON.parse(legacyHistory);
+                  localStorage.removeItem(`idea-history-${ideaId}`);
+                  resolve(parsed);
+                } catch (e) {
+                  resolve([]);
+                }
+              } else {
+                resolve([]);
+              }
+            }
+          };
+          
+          getRequest.onerror = () => {
+            resolve([]);
+          };
+        };
+        
+        request.onerror = () => {
+          resolve([]);
+        };
+      } catch (error) {
+        console.error('Error loading history from IndexedDB:', error);
+        resolve([]);
+      }
+    });
   };
 
-  const filterContentByDate = (idea: Idea, startDate: string, endDate: string) => {
-    const history = getEditHistory(idea.id);
+  const getEditHistory = async (ideaId: string): Promise<EditEntry[]> => {
+    return await loadHistoryFromIndexedDB(ideaId);
+  };
+
+  const filterContentByDate = async (idea: Idea, startDate: string, endDate: string) => {
+    const history = await getEditHistory(idea.id);
     const start = new Date(startDate);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Include the entire end date
@@ -165,13 +220,13 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
     return content;
   };
 
-  const handleDateFilter = () => {
+  const handleDateFilter = async () => {
     if (!selectedIdeaForFilter || !dateRange.start || !dateRange.end) {
       alert('Please select an idea and both start and end dates');
       return;
     }
     
-    const content = filterContentByDate(selectedIdeaForFilter, dateRange.start, dateRange.end);
+    const content = await filterContentByDate(selectedIdeaForFilter, dateRange.start, dateRange.end);
     setFilteredContent(content);
     setShowDatePreview(true);
   };
