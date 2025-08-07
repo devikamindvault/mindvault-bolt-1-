@@ -72,6 +72,9 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
   const saveIdeas = (updatedIdeas: Idea[]) => {
     setIdeas(updatedIdeas);
     localStorage.setItem('mindvault-ideas', JSON.stringify(updatedIdeas));
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('ideasUpdated', { detail: updatedIdeas }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {

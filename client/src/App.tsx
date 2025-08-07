@@ -38,7 +38,11 @@ function App() {
     const handleStorageChange = () => {
       const savedIdeas = localStorage.getItem('mindvault-ideas');
       if (savedIdeas) {
-        setIdeas(JSON.parse(savedIdeas));
+        try {
+          setIdeas(JSON.parse(savedIdeas));
+        } catch (error) {
+          console.error('Error parsing ideas from storage:', error);
+        }
       }
     };
 
@@ -46,7 +50,9 @@ function App() {
     
     // Also listen for custom events when ideas are updated
     const handleIdeasUpdate = (event: CustomEvent) => {
-      setIdeas(event.detail);
+      if (event.detail && Array.isArray(event.detail)) {
+        setIdeas(event.detail);
+      }
     };
 
     const handleSwitchToIdeas = () => {

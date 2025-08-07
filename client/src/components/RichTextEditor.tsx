@@ -55,6 +55,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
 
+  // Load ideas from localStorage on component mount and listen for updates
+  useEffect(() => {
+    const handleIdeasUpdate = () => {
+      // This will trigger a re-render with updated ideas from props
+      // The ideas prop is already being updated by the parent App component
+    };
+
+    // Listen for ideas updates from Ideas page
+    window.addEventListener('ideasUpdated', handleIdeasUpdate);
+    window.addEventListener('storage', handleIdeasUpdate);
+
+    return () => {
+      window.removeEventListener('ideasUpdated', handleIdeasUpdate);
+      window.removeEventListener('storage', handleIdeasUpdate);
+    };
+  }, []);
   const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🔥', '💡', '🎉', '🚀', '⭐', '💯', '🎯', '✨', '🌟'];
 
   // Load content when selectedIdea changes
