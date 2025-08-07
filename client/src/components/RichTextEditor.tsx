@@ -70,3 +70,38 @@ const downloadAsPDF = async () => {
     });
   }
 };
+
+  return (
+    <div className="rich-text-editor">
+      <div className="editor-toolbar">
+        <button onClick={downloadAsPDF} className="download-btn">
+          📄 Download PDF
+        </button>
+        <VoiceRecorder onTranscription={handleTranscription} />
+      </div>
+      
+      <div 
+        ref={editorRef}
+        className="rich-editor"
+        contentEditable
+        suppressContentEditableWarning={true}
+        onPaste={handlePaste}
+        style={{
+          minHeight: '400px',
+          border: '1px solid #ccc',
+          padding: '20px',
+          borderRadius: '8px',
+          backgroundColor: '#1a1a1a',
+          color: '#ffffff',
+          fontSize: '16px',
+          lineHeight: '1.6',
+          outline: 'none'
+        }}
+      >
+        <p>Start writing your journal entry...</p>
+      </div>
+    </div>
+  );
+};
+
+export default RichTextEditor;
