@@ -815,65 +815,140 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     
     try {
       setIsDownloading(true);
-      const content = editorRef.current;
-      
+      const editorElement = editorRef.current;
+
       // Create a temporary container with better styling for PDF
       const tempContainer = document.createElement('div');
       tempContainer.style.cssText = `
+        width: 800px;
+        padding: 40px;
+        background: white;
+        color: black;
+        font-family: Georgia, serif;
+        font-size: 14px;
+        line-height: 1.6;
         position: absolute;
         top: -9999px;
         left: -9999px;
-        width: 800px;
-        padding: 40px;
-        background: ${backgroundColor};
-        color: ${textColor};
-        font-family: 'Georgia', serif;
-        line-height: 1.6;
+        overflow: visible;
       `;
-      tempContainer.innerHTML = content.innerHTML;
+      
+      // Clone the editor content
+      const clonedContent = editorElement.cloneNode(true) as HTMLElement;
+      
+      // Clean up the cloned content for PDF but keep all content
+      const deleteButtons = clonedContent.querySelectorAll('.delete-btn, .resize-handle');
+      deleteButtons.forEach(btn => btn.remove());
+      
+      // Style images for PDF - make them visible and properly sized
+      const images = clonedContent.querySelectorAll('img');
+      images.forEach(img => {
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '15px 0';
+        img.style.border = '1px solid #ddd';
+        img.style.borderRadius = '4px';
+        img.style.float = 'none'; // Remove float for PDF
+        img.style.clear = 'both';
+      });
+      
+      // Style document previews for PDF
+      const documentPreviews = clonedContent.querySelectorAll('.document-preview');
+      documentPreviews.forEach(doc => {
+        const docElement = doc as HTMLElement;
+        docElement.style.display = 'block';
+        docElement.style.padding = '10px';
+        docElement.style.margin = '10px 0';
+        docElement.style.border = '2px solid #007bff';
+        docElement.style.borderRadius = '8px';
+        docElement.style.backgroundColor = '#f8f9fa';
+        docElement.style.color = '#333';
+        docElement.style.textDecoration = 'none';
+        docElement.style.float = 'none';
+        docElement.style.clear = 'both';
+        docElement.style.width = '100%';
+        docElement.style.boxSizing = 'border-box';
+      });
+      
+      // Style media preview containers
+      const mediaContainers = clonedContent.querySelectorAll('.media-preview-container');
+      mediaContainers.forEach(container => {
+        const containerElement = container as HTMLElement;
+        containerElement.style.display = 'block';
+        containerElement.style.margin = '15px 0';
+        containerElement.style.padding = '10px';
+        containerElement.style.border = '1px solid #ddd';
+        containerElement.style.borderRadius = '8px';
+        containerElement.style.backgroundColor = '#f9f9f9';
+        containerElement.style.float = 'none';
+        containerElement.style.clear = 'both';
+        containerElement.style.width = '100%';
+        containerElement.style.boxSizing = 'border-box';
+      });
+      
+      // Ensure all text is black and visible
+      const allTextElements = clonedContent.querySelectorAll('*');
+      allTextElements.forEach(element => {
+        const el = element as HTMLElement;
+        if (el.style) {
+          el.style.color = 'black';
+          el.style.backgroundColor = 'transparent';
+        }
+      });
+      
+      // Clear any floating elements
+      clonedContent.style.overflow = 'hidden';
+      clonedContent.style.clear = 'both';
+      
+      tempContainer.appendChild(clonedContent);
       document.body.appendChild(tempContainer);
-      
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = doc.internal.pageSize.getWidth();
-      const pdfHeight = doc.internal.pageSize.getHeight();
-      
+
+      // Wait a moment for images to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Convert to canvas using html-to-image with better options
       const canvas = await htmlToImage.toCanvas(tempContainer, {
-        pixelRatio: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: backgroundColor,
+        backgroundColor: 'white',
         width: 800,
         height: tempContainer.scrollHeight,
+        useCORS: true,
+        allowTaint: true,
+        scale: 2, // Higher resolution
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left'
         }
       });
-      
+
+      // Clean up
       document.body.removeChild(tempContainer);
-      
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = pdfWidth - 20;
+
+      // Create PDF with better quality
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
       let heightLeft = imgHeight;
-      let position = 10;
-      
-      doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight - 20;
-      
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
       while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
-        doc.addPage();
-        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight - 20;
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
       }
       
       const fileName = selectedIdea 
         ? `${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_idea.pdf`
         : 'mind-vault-document.pdf';
       
-      doc.save(fileName);
+      pdf.save(fileName);
       toast('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
