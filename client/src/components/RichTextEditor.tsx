@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as htmlToImage from 'html-to-image';
+import VoiceRecorder from './VoiceRecorder';
 
 interface Idea {
   id: string;
@@ -37,6 +38,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [textColor, setTextColor] = useState('#ffffff');
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [currentSelection, setCurrentSelection] = useState<Range | null>(null);
 
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
 
@@ -117,7 +119,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       setHasUnsavedChanges(true);
     };
 
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        setCurrentSelection(selection.getRangeAt(0).cloneRange());
+      }
+    };
     editor.addEventListener('input', handleInput);
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
     return () => editor.removeEventListener('input', handleInput);
   }, [selectedIdea]);
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -329,6 +339,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       png: '🖼️',
       gif: '🖼️',
       svg: '🖼️'
+      document.removeEventListener('selectionchange', handleSelectionChange);
     };
     return iconMap[extension] || '📎';
   };
@@ -893,7 +904,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <button
           onClick={saveContent}
           disabled={!hasUnsavedChanges}
-          className={`fixed bottom-6 left-6 px-6 py-4 rounded-2xl font-bold transition-all duration-300 z-50 flex items-center gap-3 shadow-2xl transform ${
+          className={`fixed bottom-6 right-6 px-6 py-4 rounded-2xl font-bold transition-all duration-300 z-50 flex items-center gap-3 shadow-2xl transform ${
             hasUnsavedChanges
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hover:scale-110 animate-pulse'
               : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
@@ -908,11 +919,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </button>
       )}
 
-      {/* PDF Download Button - Fixed Position */}
+      {/* Voice Recording Button - Bottom Left Corner */}
+      <div className="fixed bottom-6 left-6 z-50">
+        <VoiceRecorder onTranscription={handleVoiceTranscription} />
+      </div>
+
+      {/* PDF Download Button - Bottom Center */}
       <button
         onClick={downloadAsPDF}
         disabled={isDownloading}
-        className={`fixed bottom-6 right-6 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
+        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
           isDownloading 
             ? 'bg-gray-600 cursor-not-allowed' 
             : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110 animate-bounce'
