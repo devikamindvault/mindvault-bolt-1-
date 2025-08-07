@@ -355,7 +355,7 @@ p, span, div {
   border-radius: 12px;
   padding: 12px;
   position: relative;
-  max-width: 500px;
+  max-width: 320px;
   margin: 0 auto;
   transition: all 0.3s ease;
 }
@@ -369,6 +369,9 @@ p, span, div {
   border-radius: 8px;
   cursor: pointer;
   transition: transform 0.2s ease;
+  max-width: 300px !important;
+  max-height: 200px !important;
+  object-fit: contain !important;
 }
 
 .image-preview img:hover {

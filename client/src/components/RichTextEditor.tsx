@@ -458,7 +458,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     
     imageContainer.innerHTML = `
       <div class="image-preview">
-        <img src="${mediaItem.url}" alt="${mediaItem.name}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+        <img src="${mediaItem.url}" alt="${mediaItem.name}" style="max-width: 300px; max-height: 200px; width: auto; height: auto; display: block; margin: 0 auto; object-fit: contain;" />
         <div class="media-caption">${mediaItem.name}</div>
         <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove(); window.dispatchEvent(new Event('contentChanged'));">×</button>
       </div>
@@ -476,13 +476,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
     
     // Insert at the end of editor content
-    const br = document.createElement('br');
-    editorRef.current.appendChild(br);
+    const br1 = document.createElement('br');
+    const br2 = document.createElement('br');
+    editorRef.current.appendChild(br1);
     editorRef.current.appendChild(imageContainer);
-    editorRef.current.appendChild(document.createElement('br'));
+    editorRef.current.appendChild(br2);
+    
+    // Create a new paragraph for continued typing
+    const newParagraph = document.createElement('p');
+    newParagraph.innerHTML = '<br>';
+    editorRef.current.appendChild(newParagraph);
     
     // Focus back to editor
     editorRef.current.focus();
+    
+    // Set cursor to the new paragraph
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.setStart(newParagraph, 0);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
     
     handleContentChange();
   };
@@ -519,13 +535,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
     
     // Insert at the end of editor content
-    const br = document.createElement('br');
-    editorRef.current.appendChild(br);
+    const br1 = document.createElement('br');
+    const br2 = document.createElement('br');
+    editorRef.current.appendChild(br1);
     editorRef.current.appendChild(docContainer);
-    editorRef.current.appendChild(document.createElement('br'));
+    editorRef.current.appendChild(br2);
+    
+    // Create a new paragraph for continued typing
+    const newParagraph = document.createElement('p');
+    newParagraph.innerHTML = '<br>';
+    editorRef.current.appendChild(newParagraph);
     
     // Focus back to editor
     editorRef.current.focus();
+    
+    // Set cursor to the new paragraph
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.setStart(newParagraph, 0);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
     
     handleContentChange();
   };
