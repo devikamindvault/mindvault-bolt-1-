@@ -148,7 +148,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       localStorage.setItem(`idea-media-${selectedIdea.id}`, JSON.stringify(mediaMetadata));
       
       // Store large media files in IndexedDB
-      saveMediaToIndexedDB(selectedIdea.id, mediaItems);
+      await saveMediaToIndexedDB(selectedIdea.id, mediaItems);
       
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
@@ -160,25 +160,34 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
     
     // Save to edit history
-    const history = await getEditHistory(selectedIdea.id);
-    const newEntry: EditEntry = {
-      id: Date.now().toString(),
-      content: currentContent,
-      timestamp: new Date().toISOString(),
-      title: selectedIdea.title,
-      description: selectedIdea.description
-    };
-    
-    const updatedHistory = [newEntry, ...history].slice(0, 50); // Keep last 50 entries
-    await saveHistoryToIndexedDB(selectedIdea.id, updatedHistory);
+    try {
+      const history = await getEditHistory(selectedIdea.id);
+      const newEntry: EditEntry = {
+        id: Date.now().toString(),
+        content: currentContent,
+        timestamp: new Date().toISOString(),
+        title: selectedIdea.title,
+        description: selectedIdea.description
+      };
+      
+      const updatedHistory = [newEntry, ...history].slice(0, 50); // Keep last 50 entries
+      await saveHistoryToIndexedDB(selectedIdea.id, updatedHistory);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.error('Storage quota exceeded for history. Consider reducing content size.');
+        alert('Storage limit reached for edit history. Please reduce content size.');
+      } else {
+        console.error('Error saving history:', error);
+      }
+    }
     
     // Dispatch event to notify other components
     window.dispatchEvent(new CustomEvent('ideasUpdated', { detail: ideas }));
   };
 
   // IndexedDB functions for storing large media files
-  const saveMediaToIndexedDB = async (ideaId: string, mediaItems: MediaItem[]) => {
-    try {
+  const saveMediaToIndexedDB = async (ideaId: string, mediaItems: MediaItem[]): Promise<void> => {
+    return new Promise((resolve, reject) => {
       const request = indexedDB.open('IdeaMediaDB', 3);
       
       request.onupgradeneeded = (event) => {
@@ -205,12 +214,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             id: `idea-${ideaId}`,
             items: mediaItems
           };
-          store.add(mediaData);
+          const addRequest = store.add(mediaData);
+          
+          addRequest.onsuccess = () => {
+            resolve();
+          };
+          
+          addRequest.onerror = () => {
+            reject(addRequest.error);
+          };
+        };
+        
+        clearRequest.onerror = () => {
+          reject(clearRequest.error);
+        };
+        
+        transaction.onerror = () => {
+          reject(transaction.error);
         };
       };
-    } catch (error) {
-      console.error('Error saving to IndexedDB:', error);
-    }
+      
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
   };
 
   const loadMediaFromIndexedDB = async (ideaId: string): Promise<MediaItem[]> => {
@@ -257,8 +284,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     });
   };
 
-  const saveHistoryToIndexedDB = async (ideaId: string, history: EditEntry[]) => {
-    try {
+  const saveHistoryToIndexedDB = async (ideaId: string, history: EditEntry[]): Promise<void> => {
+    return new Promise((resolve, reject) => {
       const request = indexedDB.open('IdeaMediaDB', 3);
       
       request.onupgradeneeded = (event) => {
@@ -282,11 +309,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         };
         
         // Use put to update existing or create new
-        store.put(historyData);
+        const putRequest = store.put(historyData);
+        
+        putRequest.onsuccess = () => {
+          resolve();
+        };
+        
+        putRequest.onerror = () => {
+          reject(putRequest.error);
+        };
+        
+        transaction.onerror = () => {
+          reject(transaction.error);
+        };
       };
-    } catch (error) {
-      console.error('Error saving history to IndexedDB:', error);
-    }
+      
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
   };
 
   const loadHistoryFromIndexedDB = async (ideaId: string): Promise<EditEntry[]> => {
