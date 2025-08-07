@@ -110,6 +110,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         editorRef.current.innerHTML = '';
       }
     }
+    
+    // Add event listener for content changes
+    const handleContentChanged = () => {
+      if (editorRef.current) {
+        handleContentChange();
+      }
+    };
+    
+    window.addEventListener('contentChanged', handleContentChanged);
+    
+    return () => {
+      window.removeEventListener('contentChanged', handleContentChanged);
+    };
   }, [selectedIdea]);
 
   // Save content and media
@@ -341,59 +354,39 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const insertImagePreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
-    const currentSelection = window.getSelection();
-    let range = null;
+    // Create image container
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'media-container';
+    imageContainer.contentEditable = 'false';
+    imageContainer.setAttribute('data-media-id', mediaItem.id);
     
-    // Check if there's a valid selection range
-    if (currentSelection && currentSelection.rangeCount > 0) {
-      range = currentSelection.getRangeAt(0);
-      range.deleteContents();
-    }
-    
-    const imagePreview = document.createElement('div');
-    imagePreview.className = 'image-preview-container';
-    imagePreview.setAttribute('data-media-id', mediaItem.id);
-    imagePreview.contentEditable = 'false'; // Prevent editing of media container
-    imagePreview.innerHTML = `
-      <div class="image-wrapper">
-        <img src="${mediaItem.url}" alt="${mediaItem.name}" class="resizable-image" style="width: 300px; height: auto; max-width: 100%; cursor: pointer;" />
-        <div class="resize-handles">
-          <div class="resize-handle resize-se"></div>
-        </div>
+    imageContainer.innerHTML = `
+      <div class="image-preview">
+        <img src="${mediaItem.url}" alt="${mediaItem.name}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+        <div class="media-caption">${mediaItem.name}</div>
+        <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove(); window.dispatchEvent(new Event('contentChanged'));">×</button>
       </div>
-      <div class="image-caption">${mediaItem.name}</div>
-      <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add click handler for modal preview
-    const img = imagePreview.querySelector('img');
+    // Add click handler for preview
+    const img = imageContainer.querySelector('img');
     if (img) {
-      img.addEventListener('click', () => {
+      img.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         setModalImageUrl(mediaItem.url);
         setShowImageModal(true);
       });
-      
-      // Add resize functionality
-      makeImageResizable(img, imagePreview);
     }
     
-    // Insert at cursor position or at the end
-    if (range) {
-      range.insertNode(imagePreview);
-      // Add line breaks for proper spacing
-      const afterBr = document.createElement('br');
-      const beforeBr = document.createElement('br');
-      range.collapse(false);
-      range.insertNode(afterBr);
-      range.insertNode(beforeBr);
-    } else {
-      // Insert at the end with proper spacing
-      const br1 = document.createElement('br');
-      const br2 = document.createElement('br');
-      editorRef.current.appendChild(br1);
-      editorRef.current.appendChild(imagePreview);
-      editorRef.current.appendChild(br2);
-    }
+    // Insert at the end of editor content
+    const br = document.createElement('br');
+    editorRef.current.appendChild(br);
+    editorRef.current.appendChild(imageContainer);
+    editorRef.current.appendChild(document.createElement('br'));
+    
+    // Focus back to editor
+    editorRef.current.focus();
     
     handleContentChange();
   };
@@ -401,56 +394,42 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const insertDocumentPreview = (mediaItem: MediaItem) => {
     if (!editorRef.current) return;
     
-    const currentSelection = window.getSelection();
-    let range = null;
+    // Create document container
+    const docContainer = document.createElement('div');
+    docContainer.className = 'media-container';
+    docContainer.contentEditable = 'false';
+    docContainer.setAttribute('data-media-id', mediaItem.id);
     
-    // Check if there's a valid selection range
-    if (currentSelection && currentSelection.rangeCount > 0) {
-      range = currentSelection.getRangeAt(0);
-      range.deleteContents();
-    }
-    
-    const docPreview = document.createElement('div');
-    docPreview.className = 'document-preview-container';
-    docPreview.setAttribute('data-media-id', mediaItem.id);
-    docPreview.contentEditable = 'false'; // Prevent editing of media container
-    docPreview.innerHTML = `
+    docContainer.innerHTML = `
       <div class="document-preview">
-        <div class="document-icon">📄</div>
-        <div class="document-info">
-          <div class="document-name">${mediaItem.name}</div>
-          <div class="document-type">${getFileExtension(mediaItem.name).toUpperCase()} Document</div>
+        <div class="doc-icon">📄</div>
+        <div class="doc-info">
+          <div class="doc-name">${mediaItem.name}</div>
+          <div class="doc-type">${getFileExtension(mediaItem.name).toUpperCase()} Document</div>
         </div>
+        <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove(); window.dispatchEvent(new Event('contentChanged'));">×</button>
       </div>
-      <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add click handler for preview
-    const preview = docPreview.querySelector('.document-preview');
+    // Add click handler
+    const preview = docContainer.querySelector('.document-preview');
     if (preview) {
-      preview.addEventListener('click', () => {
+      preview.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         setModalDocument(mediaItem);
         setShowDocumentModal(true);
       });
     }
     
-    // Insert at cursor position or at the end
-    if (range) {
-      range.insertNode(docPreview);
-      // Add line breaks for proper spacing
-      const afterBr = document.createElement('br');
-      const beforeBr = document.createElement('br');
-      range.collapse(false);
-      range.insertNode(afterBr);
-      range.insertNode(beforeBr);
-    } else {
-      // Insert at the end with proper spacing
-      const br1 = document.createElement('br');
-      const br2 = document.createElement('br');
-      editorRef.current.appendChild(br1);
-      editorRef.current.appendChild(docPreview);
-      editorRef.current.appendChild(br2);
-    }
+    // Insert at the end of editor content
+    const br = document.createElement('br');
+    editorRef.current.appendChild(br);
+    editorRef.current.appendChild(docContainer);
+    editorRef.current.appendChild(document.createElement('br'));
+    
+    // Focus back to editor
+    editorRef.current.focus();
     
     handleContentChange();
   };
