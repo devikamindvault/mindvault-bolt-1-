@@ -570,15 +570,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       {/* Add padding to prevent overlap with fixed save button */}
       <style>{`
         .rich-text-editor {
-          padding-right: 120px;
+          padding-right: 20px;
         }
         @media (max-width: 768px) {
           .rich-text-editor {
             padding-right: 20px;
-          }
-          .save-button-mobile {
-            right: 10px !important;
-            bottom: 10px !important;
           }
         }
       `}</style>
@@ -948,16 +944,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={saveContent}
         disabled={!selectedIdea || !hasUnsavedChanges}
-        className={`save-button-mobile fixed p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+        className={`fixed p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
           selectedIdea && hasUnsavedChanges
             ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
         }`}
         style={{ 
-          right: '20px', 
+          right: '120px', 
           left: 'auto',
           position: 'fixed',
-          bottom: '20px'
+          bottom: '24px'
         }}
         title={
           !selectedIdea 
@@ -979,9 +975,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <div 
           className="fixed text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30"
           style={{ 
-            right: '24px', 
+            right: '120px', 
             left: 'auto',
-            bottom: '100px',
+            bottom: '90px',
             position: 'fixed'
           }}
         >
