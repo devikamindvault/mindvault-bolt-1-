@@ -30,45 +30,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [backgroundColor, setBackgroundColor] = useState(() => {
-    return localStorage.getItem('editor-bg-color') || '#1f2937';
-  });
-  const [textColor, setTextColor] = useState('#ffffff');
-
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [currentSelection, setCurrentSelection] = useState<Range | null>(null);
-
-  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
-
-  const stickers = ['⭐', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🎯', '💡', '🔥', '💪', '👍', '✨', '🌟', '💫', '⚡', '🚀', '🎪', '🎭', '🎨', '🎵', '🎶', '❤️', '💖', '💝', '🌈', '🦄', '🌸', '🌺', '🌻', '🌷', '🌹', '💐'];
-
-  const dailyQuotes = [
-    "The way to get started is to quit talking and begin doing. - Walt Disney",
-    "Innovation distinguishes between a leader and a follower. - Steve Jobs",
-    "Your limitation—it's only your imagination.",
-    "Great things never come from comfort zones.",
-    "Dream it. Wish it. Do it.",
-    "Success doesn't just find you. You have to go out and get it.",
-    "The harder you work for something, the greater you'll feel when you achieve it.",
-    "Don't stop when you're tired. Stop when you're done.",
-    "Wake up with determination. Go to bed with satisfaction.",
-    "Do something today that your future self will thank you for.",
-    "Little things make big days.",
-    "It's going to be hard, but hard does not mean impossible.",
-    "Don't wait for opportunity. Create it.",
-    "Sometimes we're tested not to show our weaknesses, but to discover our strengths.",
-    "The key to success is to focus on goals, not obstacles."
-  ];
-
-  const getTodaysQuote = () => {
-    const today = new Date();
-    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
-    return dailyQuotes[dayOfYear % dailyQuotes.length];
-  };
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
