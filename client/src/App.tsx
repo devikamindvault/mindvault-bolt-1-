@@ -49,11 +49,17 @@ function App() {
       setIdeas(event.detail);
     };
 
+    const handleSwitchToIdeas = () => {
+      setCurrentPage('ideas');
+    };
+
     window.addEventListener('ideasUpdated', handleIdeasUpdate as EventListener);
+    window.addEventListener('switchToIdeas', handleSwitchToIdeas as EventListener);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('ideasUpdated', handleIdeasUpdate as EventListener);
+      window.removeEventListener('switchToIdeas', handleSwitchToIdeas as EventListener);
     };
   }, []);
 
