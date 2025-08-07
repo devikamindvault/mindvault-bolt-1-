@@ -85,56 +85,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
   useEffect(() => {
     if (selectedIdea && editorRef.current) {
-      // Load saved background for this idea or use default
+      // Load saved background and text color for this idea
       const savedBg = localStorage.getItem(`idea-bg-${selectedIdea.id}`) || backgroundColor;
+      const savedTextColor = localStorage.getItem(`idea-text-${selectedIdea.id}`) || textColor;
       setBackgroundColor(savedBg);
+      setTextColor(savedTextColor);
       
-      // Set the entire editor content to the idea template
+      // Set the editor content to just the idea data
       editorRef.current.style.backgroundColor = savedBg;
+      editorRef.current.style.color = savedTextColor;
       editorRef.current.innerHTML = `
-        <div style="min-height: 100vh; padding: 40px; background: ${savedBg}; color: ${textColor}; font-family: Georgia, serif; line-height: 1.8;">
-          <div style="text-align: center; margin-bottom: 40px; position: relative;">
-            ${selectedIdea.isPinned ? `<div style="position: absolute; top: -20px; right: 20px; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1f2937; padding: 12px; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);">📌</div>` : ''}
-            <h1 style="color: #a855f7; font-size: 48px; font-weight: bold; margin: 0 0 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-              💡 ${selectedIdea.title}
-            </h1>
-            <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(219, 39, 119, 0.2)); border: 2px solid #8b5cf6; border-radius: 20px; padding: 30px; margin: 30px 0; backdrop-filter: blur(10px);">
-              <p style="font-size: 24px; font-style: italic; color: #e2e8f0; margin: 0; line-height: 1.6;">
-                "${selectedIdea.description}"
-              </p>
-            </div>
-            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin: 30px 0;">
-              ${selectedIdea.category ? `<span style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">📂 ${selectedIdea.category}</span>` : ''}
-              ${selectedIdea.deadline ? `<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">📅 ${new Date(selectedIdea.deadline).toLocaleDateString()}</span>` : ''}
-              <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">✨ Created ${new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-          
-          <div style="border-top: 3px solid #8b5cf6; padding-top: 40px; margin-top: 40px;">
-            <h2 style="color: #a855f7; font-size: 32px; margin: 0 0 30px 0; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
-              📝 Development Workspace
-            </h2>
-            
-            <div style="background: rgba(139, 92, 246, 0.1); border-left: 5px solid #8b5cf6; padding: 25px; margin: 25px 0; border-radius: 10px;">
-              <h3 style="color: #c084fc; font-size: 24px; margin: 0 0 15px 0;">🎯 Project Goals:</h3>
-              <ul style="color: #e2e8f0; font-size: 18px; line-height: 1.8; padding-left: 30px;">
-                <li style="margin-bottom: 10px;">What makes this idea unique and valuable?</li>
-                <li style="margin-bottom: 10px;">What resources and skills do you need?</li>
-                <li style="margin-bottom: 10px;">What are the key milestones and next steps?</li>
-              </ul>
-            </div>
-            
-            <div style="margin: 40px 0;">
-              <h3 style="color: #c084fc; font-size: 24px; margin: 0 0 20px 0;">💭 Your Thoughts & Progress:</h3>
-              <div style="min-height: 200px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 15px; border: 1px dashed #8b5cf6;">
-                <p style="color: #d1d5db; font-size: 18px; margin: 0;">Start writing your thoughts, plans, research, and progress updates here...</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1 style="color: ${savedTextColor}; font-size: 32px; font-weight: bold; margin-bottom: 20px;">
+          ${selectedIdea.title}
+        </h1>
+        <p style="color: ${savedTextColor}; font-size: 18px; line-height: 1.6; margin-bottom: 30px;">
+          ${selectedIdea.description}
+        </p>
       `;
     }
-  }, [selectedIdea]);
+  }, [selectedIdea, backgroundColor, textColor]);
 
   const toast = (message: string, type: 'success' | 'error' = 'success') => {
     // Create a simple toast notification
@@ -511,7 +480,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 <div className="flex items-center gap-2 mt-1">
                   {selectedIdea.category && (
                     <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
+                      if (selectedIdea) {
+                        localStorage.setItem(`idea-text-${selectedIdea.id}`, color);
+                      }
                       {selectedIdea.category}
+                      // Update existing content
+                      if (editorRef.current) {
+                        const titleElement = editorRef.current.querySelector('h1');
+                        const descElement = editorRef.current.querySelector('p');
+                        if (titleElement) titleElement.style.color = color;
+                        if (descElement) descElement.style.color = color;
+                      }
                     </span>
                   )}
                   {selectedIdea.isPinned && (
@@ -523,7 +502,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </div>
           <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
         </button>
+                  if (selectedIdea) {
+                    localStorage.setItem(`idea-text-${selectedIdea.id}`, e.target.value);
+                  }
 
+                  // Update existing content
+                  if (editorRef.current) {
+                    const titleElement = editorRef.current.querySelector('h1');
+                    const descElement = editorRef.current.querySelector('p');
+                    if (titleElement) titleElement.style.color = e.target.value;
+                    if (descElement) descElement.style.color = e.target.value;
+                  }
         {showIdeaDropdown && (
           <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
             {ideas.length === 0 ? (
@@ -746,6 +735,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
                       if (contentDiv) {
                         (contentDiv as HTMLElement).style.background = e.target.value;
+                        // Update text content background if it exists
+                        const titleElement = editorRef.current.querySelector('h1');
+                        const descElement = editorRef.current.querySelector('p');
+                        if (titleElement) titleElement.style.color = textColor;
+                        if (descElement) descElement.style.color = textColor;
                       }
                     }
                   }}
@@ -773,6 +767,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   onChange={(e) => {
                     setTextColor(e.target.value);
                     execCommand('foreColor', e.target.value);
+                    const titleElement = editorRef.current.querySelector('h1');
+                    const descElement = editorRef.current.querySelector('p');
+                    if (titleElement) titleElement.style.color = textColor;
+                    if (descElement) descElement.style.color = textColor;
                   }}
                   className="w-full h-10 rounded-lg border border-slate-600"
                 />
