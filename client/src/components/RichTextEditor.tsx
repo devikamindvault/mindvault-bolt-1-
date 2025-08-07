@@ -905,6 +905,32 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           <VoiceRecorder onTranscription={handleVoiceTranscription} />
         </div>
 
+        {/* Save Button */}
+        <div className="toolbar-group bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
+          <button
+            onClick={saveContent}
+            disabled={!selectedIdea || !hasUnsavedChanges}
+            className={`toolbar-button flex items-center gap-2 px-4 ${
+              selectedIdea && hasUnsavedChanges
+                ? 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            }`}
+            title={
+              !selectedIdea 
+                ? 'Select an idea first' 
+                : !hasUnsavedChanges 
+                ? 'No changes to save' 
+                : 'Save changes'
+            }
+          >
+            <span className="text-lg">💾</span>
+            <span className="text-sm font-medium">Save</span>
+            {hasUnsavedChanges && selectedIdea && (
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+            )}
+          </button>
+        </div>
+
         {/* Last Saved Indicator */}
         {lastSaved && (
           <div className="text-sm text-green-300 bg-gradient-to-r from-green-900/50 to-emerald-900/50 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg">
@@ -934,26 +960,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </div>
         )}
       </div>
-
-      {/* Save Button - Bottom Left Corner */}
-      {selectedIdea && (
-        <button
-          onClick={saveContent}
-          disabled={!hasUnsavedChanges}
-          className={`fixed bottom-6 right-6 px-6 py-4 rounded-2xl font-bold transition-all duration-300 z-50 flex items-center gap-3 shadow-2xl transform ${
-            hasUnsavedChanges
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white hover:scale-110 animate-pulse'
-              : 'bg-gradient-to-r from-gray-600 to-gray-700 text-gray-400 cursor-not-allowed'
-          }`}
-          title={hasUnsavedChanges ? 'Save changes' : 'No changes to save'}
-        >
-          <span className="text-2xl">💾</span>
-          <span className="text-lg">Save</span>
-          {hasUnsavedChanges && (
-            <span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-          )}
-        </button>
-      )}
 
       {/* PDF Download Button - Bottom Center */}
       <button
