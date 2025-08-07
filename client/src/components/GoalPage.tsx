@@ -212,7 +212,8 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       });
       
       if (filteredEntries.length === 0) {
-        return `No content found between ${startDate} and ${endDate}`;
+        alert(`No content found between ${startDate} and ${endDate}`);
+        return;
       }
       
       let content = `Content from ${startDate} to ${endDate}\n\n`;
@@ -260,7 +261,8 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-  } catch (error) {
+      console.error('Error downloading date range content:', error);
+      alert('Error downloading content. Please try again.');
     }
   };
 
