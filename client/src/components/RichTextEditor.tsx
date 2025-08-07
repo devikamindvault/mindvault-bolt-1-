@@ -37,6 +37,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<Range | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [modalImage, setModalImage] = useState<string>('');
+  const [imageNames, setImageNames] = useState<{[key: string]: string}>({});
 
   // Emojis and stickers arrays
   const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'];
@@ -250,142 +253,148 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         return;
       }
 
+      const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const reader = new FileReader();
       reader.onload = (event) => {
-        const imgContainer = document.createElement('div');
-        imgContainer.className = 'media-preview-container';
-        imgContainer.style.cssText = `
-          position: relative;
-          display: block;
-          margin: 16px 0;
-          clear: both;
-          max-width: 100%;
-          border: 2px solid #374151;
-          border-radius: 12px;
-          background: #1f2937;
-          padding: 8px;
-          transition: all 0.2s ease;
-        `;
-        
-        imgContainer.innerHTML = `
-          <img src="${event.target?.result}" style="
-            width: 300px; 
-            height: auto; 
-            max-width: 100%;
-            min-width: 150px;
-            max-height: 400px; 
-            object-fit: contain; 
-            border-radius: 8px; 
-            cursor: pointer;
-            display: block;
-            resize: both;
-            overflow: hidden;
-          " onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
-          <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image" style="
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #ef4444;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-          ">×</button>
-          <div class="resize-handle" style="
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(-45deg, transparent 30%, #60a5fa 30%, #60a5fa 70%, transparent 70%);
-            cursor: nw-resize;
-            border-radius: 0 0 8px 0;
-          "></div>
-          <div class="image-modal" style="
-            display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0,0,0,0.9); 
-            z-index: 10000; 
-            align-items: center; 
-            justify-content: center;
-          " onclick="this.style.display='none'">
-            <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
-          </div>
-        `;
-        
-        // Add resize functionality
-        const img = imgContainer.querySelector('img');
-        const resizeHandle = imgContainer.querySelector('.resize-handle');
-        let isResizing = false;
-        
-        resizeHandle.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          isResizing = true;
-          
-          const startX = e.clientX;
-          const startY = e.clientY;
-          const startWidth = parseInt(window.getComputedStyle(img).width, 10);
-          
-          const handleMouseMove = (e) => {
-            if (!isResizing) return;
-            
-            const width = startWidth + (e.clientX - startX);
-            const minWidth = 150;
-            const maxWidth = 800;
-            
-            if (width >= minWidth && width <= maxWidth) {
-              img.style.width = width + 'px';
-            }
-          };
-          
-          const handleMouseUp = () => {
-            isResizing = false;
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-          };
-          
-          document.addEventListener('mousemove', handleMouseMove);
-          document.addEventListener('mouseup', handleMouseUp);
-        });
-        
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          range.insertNode(imgContainer);
-          
-          // Add line breaks before and after for proper text flow
-          const beforeBr = document.createElement('br');
-          const afterBr = document.createElement('br');
-          range.insertNode(beforeBr);
-          range.setStartAfter(beforeBr);
-          range.insertNode(imgContainer);
-          range.setStartAfter(imgContainer);
-          range.insertNode(afterBr);
-          range.setStartAfter(afterBr);
-        } else if (editorRef.current) {
-          const beforeBr = document.createElement('br');
-          const afterBr = document.createElement('br');
-          editorRef.current.appendChild(beforeBr);
-          editorRef.current.appendChild(imgContainer);
-          editorRef.current.appendChild(afterBr);
-        }
-        
+        const imageUrl = event.target?.result as string;
+        setImageNames(prev => ({...prev, [imageUrl]: file.name}));
+        insertImagePreviewAtCursor(imageUrl, file.name, imageId);
         toast('Image uploaded successfully!');
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const insertImagePreviewAtCursor = (imageUrl: string, fileName: string, imageId: string) => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      
+      // Create image preview container (like document preview)
+      const previewContainer = document.createElement('div');
+      previewContainer.className = 'image-document-preview';
+      previewContainer.contentEditable = 'false';
+      previewContainer.setAttribute('data-image-id', imageId);
+      previewContainer.style.cssText = `
+        display: inline-block;
+        margin: 8px 12px 8px 0;
+        padding: 12px;
+        background: #374151;
+        border: 2px solid #4b5563;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        max-width: 300px;
+        vertical-align: top;
+        position: relative;
+      `;
+      
+      // Create thumbnail image
+      const thumbnail = document.createElement('img');
+      thumbnail.src = imageUrl;
+      thumbnail.style.cssText = `
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: block;
+      `;
+      
+      // Create file name label
+      const nameLabel = document.createElement('div');
+      nameLabel.textContent = fileName;
+      nameLabel.style.cssText = `
+        color: #e5e7eb;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+        word-break: break-word;
+        line-height: 1.3;
+      `;
+      
+      // Create image type indicator
+      const typeIndicator = document.createElement('div');
+      typeIndicator.textContent = '🖼️ Image';
+      typeIndicator.style.cssText = `
+        color: #9ca3af;
+        font-size: 12px;
+        text-align: center;
+        margin-top: 4px;
+      `;
+      
+      // Add click handler for preview
+      previewContainer.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setModalImage(imageUrl);
+        setShowImageModal(true);
+      });
+      
+      // Add hover effects
+      previewContainer.addEventListener('mouseenter', () => {
+        previewContainer.style.borderColor = '#60a5fa';
+        previewContainer.style.background = '#4b5563';
+      });
+      
+      previewContainer.addEventListener('mouseleave', () => {
+        previewContainer.style.borderColor = '#4b5563';
+        previewContainer.style.background = '#374151';
+      });
+      
+      // Create delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '×';
+      deleteBtn.style.cssText = `
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #ef4444;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        transition: all 0.2s ease;
+      `;
+      
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        previewContainer.remove();
+        saveContent();
+      });
+      
+      // Add hover effect for delete button
+      deleteBtn.addEventListener('mouseenter', () => {
+        deleteBtn.style.background = '#dc2626';
+        deleteBtn.style.transform = 'scale(1.1)';
+      });
+      
+      // Assemble the preview container
+      previewContainer.appendChild(thumbnail);
+      previewContainer.appendChild(nameLabel);
+      previewContainer.appendChild(typeIndicator);
+      previewContainer.appendChild(deleteBtn);
+      
+      // Insert into editor
+      range.deleteContents();
+      range.insertNode(previewContainer);
+      
+      // Add a space after the image preview for text continuation
+      const spaceNode = document.createTextNode(' ');
+      range.setStartAfter(previewContainer);
+      range.insertNode(spaceNode);
+      range.setStartAfter(spaceNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
   };
 
@@ -815,140 +824,126 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     
     try {
       setIsDownloading(true);
-      const editorElement = editorRef.current;
-
+      const content = editorRef.current;
+      
       // Create a temporary container with better styling for PDF
       const tempContainer = document.createElement('div');
       tempContainer.style.cssText = `
-        width: 800px;
-        padding: 40px;
-        background: white;
-        color: black;
-        font-family: Georgia, serif;
-        font-size: 14px;
-        line-height: 1.6;
         position: absolute;
         top: -9999px;
         left: -9999px;
-        overflow: visible;
+        width: 800px;
+        padding: 40px;
+        background: ${backgroundColor};
+        color: ${textColor};
+        font-family: 'Georgia', serif;
+        line-height: 1.6;
       `;
+      tempContainer.innerHTML = content.innerHTML;
+      document.body.appendChild(tempContainer);
       
-      // Clone the editor content
-      const clonedContent = editorElement.cloneNode(true) as HTMLElement;
-      
-      // Clean up the cloned content for PDF but keep all content
-      const deleteButtons = clonedContent.querySelectorAll('.delete-btn, .resize-handle');
-      deleteButtons.forEach(btn => btn.remove());
-      
-      // Style images for PDF - make them visible and properly sized
-      const images = clonedContent.querySelectorAll('img');
-      images.forEach(img => {
-        img.style.maxWidth = '100%';
-        img.style.height = 'auto';
-        img.style.display = 'block';
-        img.style.margin = '15px 0';
-        img.style.border = '1px solid #ddd';
-        img.style.borderRadius = '4px';
-        img.style.float = 'none'; // Remove float for PDF
-        img.style.clear = 'both';
-      });
-      
-      // Style document previews for PDF
-      const documentPreviews = clonedContent.querySelectorAll('.document-preview');
-      documentPreviews.forEach(doc => {
-        const docElement = doc as HTMLElement;
-        docElement.style.display = 'block';
-        docElement.style.padding = '10px';
-        docElement.style.margin = '10px 0';
-        docElement.style.border = '2px solid #007bff';
-        docElement.style.borderRadius = '8px';
-        docElement.style.backgroundColor = '#f8f9fa';
-        docElement.style.color = '#333';
-        docElement.style.textDecoration = 'none';
-        docElement.style.float = 'none';
-        docElement.style.clear = 'both';
-        docElement.style.width = '100%';
-        docElement.style.boxSizing = 'border-box';
-      });
-      
-      // Style media preview containers
-      const mediaContainers = clonedContent.querySelectorAll('.media-preview-container');
-      mediaContainers.forEach(container => {
-        const containerElement = container as HTMLElement;
-        containerElement.style.display = 'block';
-        containerElement.style.margin = '15px 0';
-        containerElement.style.padding = '10px';
-        containerElement.style.border = '1px solid #ddd';
-        containerElement.style.borderRadius = '8px';
-        containerElement.style.backgroundColor = '#f9f9f9';
-        containerElement.style.float = 'none';
-        containerElement.style.clear = 'both';
-        containerElement.style.width = '100%';
-        containerElement.style.boxSizing = 'border-box';
-      });
-      
-      // Ensure all text is black and visible
-      const allTextElements = clonedContent.querySelectorAll('*');
-      allTextElements.forEach(element => {
-        const el = element as HTMLElement;
-        if (el.style) {
-          el.style.color = 'black';
-          el.style.backgroundColor = 'transparent';
+      // Handle images in PDF
+      const imageDocuments = tempContainer.querySelectorAll('.image-document-preview');
+      imageDocuments.forEach((container, index) => {
+        const img = container.querySelector('img');
+        const nameLabel = container.querySelector('div');
+        
+        if (img && nameLabel) {
+          // Create a PDF-friendly image container
+          const pdfImageContainer = document.createElement('div');
+          pdfImageContainer.style.cssText = `
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #4b5563;
+            border-radius: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            page-break-inside: avoid;
+          `;
+          
+          // Clone and style the image for PDF
+          const pdfImg = img.cloneNode(true) as HTMLImageElement;
+          pdfImg.style.cssText = `
+            max-width: 100%;
+            height: auto;
+            max-height: 400px;
+            border-radius: 4px;
+            display: block;
+            margin: 0 auto 10px auto;
+          `;
+          
+          // Create image caption
+          const caption = document.createElement('div');
+          caption.textContent = nameLabel.textContent || `Image ${index + 1}`;
+          caption.style.cssText = `
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+            margin-top: 8px;
+          `;
+          
+          pdfImageContainer.appendChild(pdfImg);
+          pdfImageContainer.appendChild(caption);
+          container.replaceWith(pdfImageContainer);
         }
       });
       
-      // Clear any floating elements
-      clonedContent.style.overflow = 'hidden';
-      clonedContent.style.clear = 'both';
+      // Handle regular images (if any remain)
+      const images = tempContainer.querySelectorAll('img:not(.image-document-preview img)');
+      images.forEach((img, index) => {
+        const imgElement = img as HTMLImageElement;
+        imgElement.style.cssText = `
+          max-width: 100%;
+          height: auto;
+          max-height: 400px;
+          border-radius: 8px;
+          margin: 20px 0;
+          display: block;
+          page-break-inside: avoid;
+        `;
+      });
       
-      tempContainer.appendChild(clonedContent);
-      document.body.appendChild(tempContainer);
-
-      // Wait a moment for images to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Convert to canvas using html-to-image with better options
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = doc.internal.pageSize.getWidth();
+      const pdfHeight = doc.internal.pageSize.getHeight();
+      
       const canvas = await htmlToImage.toCanvas(tempContainer, {
-        backgroundColor: 'white',
-        width: 800,
-        height: tempContainer.scrollHeight,
+        pixelRatio: 2,
         useCORS: true,
         allowTaint: true,
-        scale: 2, // Higher resolution
+        backgroundColor: backgroundColor,
+        width: 800,
+        height: tempContainer.scrollHeight,
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left'
         }
       });
-
-      // Clean up
+      
       document.body.removeChild(tempContainer);
-
-      // Create PDF with better quality
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pdfWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
       let heightLeft = imgHeight;
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
+      let position = 10;
+      
+      doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight - 20;
+      
       while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
+        position = heightLeft - imgHeight + 10;
+        doc.addPage();
+        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight - 20;
       }
       
       const fileName = selectedIdea 
         ? `${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_idea.pdf`
         : 'mind-vault-document.pdf';
       
-      pdf.save(fileName);
+      doc.save(fileName);
       toast('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -1332,6 +1327,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </div>
         )}
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-4xl">
+            <img 
+              src={modalImage} 
+              alt="Preview" 
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 text-white bg-red-600 hover:bg-red-700 rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold transition-colors"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Save Button - Bottom Right Corner */}
       <button
