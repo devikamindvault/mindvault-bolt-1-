@@ -220,6 +220,7 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
     
     return words.slice(0, maxWords).join(' ') + '...';
   };
+
   return (
     <div className="ideas-page p-6">
       <div className="flex justify-between items-center mb-8">
@@ -239,13 +240,15 @@ const GoalPage: React.FC<GoalPageProps> = ({ onSelectIdea }) => {
           <Plus className="w-5 h-5" />
           New Idea
         </button>
-        <button
-          onClick={() => setShowDateFilter(true)}
-          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          <Filter className="w-5 h-5" />
-          Date Filter
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowDateFilter(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Filter className="w-5 h-5" />
+            Date Filter
+          </button>
+        </div>
       </div>
 
       {showForm && (
