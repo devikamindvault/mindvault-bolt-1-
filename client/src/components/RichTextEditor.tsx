@@ -252,12 +252,61 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        const img = document.createElement('div');
-        img.className = 'media-preview-container';
-        img.innerHTML = `
-          <img src="${event.target?.result}" style="width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 8px; cursor: pointer;" onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
-          <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image">×</button>
-          <div class="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;" onclick="this.style.display='none'">
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'media-preview-container';
+        imgContainer.style.cssText = `
+          position: relative;
+          display: block;
+          margin: 16px 0;
+          clear: both;
+          max-width: 100%;
+          border: 2px solid #374151;
+          border-radius: 12px;
+          background: #1f2937;
+          padding: 8px;
+          transition: all 0.2s ease;
+        `;
+        
+        imgContainer.innerHTML = `
+          <img src="${event.target?.result}" style="
+            width: 100%; 
+            height: auto; 
+            max-height: 400px; 
+            object-fit: contain; 
+            border-radius: 8px; 
+            cursor: pointer;
+            display: block;
+          " onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
+          <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image" style="
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+          ">×</button>
+          <div class="image-modal" style="
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.9); 
+            z-index: 10000; 
+            align-items: center; 
+            justify-content: center;
+          " onclick="this.style.display='none'">
             <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
           </div>
         `;
@@ -265,11 +314,23 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
-          range.insertNode(img);
-          range.setStartAfter(img);
-          range.setEndAfter(img);
+          range.insertNode(imgContainer);
+          
+          // Add line breaks before and after for proper text flow
+          const beforeBr = document.createElement('br');
+          const afterBr = document.createElement('br');
+          range.insertNode(beforeBr);
+          range.setStartAfter(beforeBr);
+          range.insertNode(imgContainer);
+          range.setStartAfter(imgContainer);
+          range.insertNode(afterBr);
+          range.setStartAfter(afterBr);
         } else if (editorRef.current) {
-          editorRef.current.appendChild(img);
+          const beforeBr = document.createElement('br');
+          const afterBr = document.createElement('br');
+          editorRef.current.appendChild(beforeBr);
+          editorRef.current.appendChild(imgContainer);
+          editorRef.current.appendChild(afterBr);
         }
         
         toast('Image uploaded successfully!');
@@ -457,9 +518,45 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           reader.onload = (event) => {
             const img = document.createElement('div');
             img.className = 'media-preview-container';
+            img.style.cssText = `
+              position: relative;
+              display: block;
+              margin: 16px 0;
+              clear: both;
+              max-width: 100%;
+              border: 2px solid #374151;
+              border-radius: 12px;
+              background: #1f2937;
+              padding: 8px;
+            `;
             img.innerHTML = `
-              <img src="${event.target?.result}" style="width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 8px; cursor: pointer;" onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
-              <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image">×</button>
+              <img src="${event.target?.result}" style="
+                width: 100%; 
+                height: auto; 
+                max-height: 400px; 
+                object-fit: contain; 
+                border-radius: 8px; 
+                cursor: pointer;
+                display: block;
+              " onclick="this.parentElement.parentElement.querySelector('.image-modal').style.display='flex'" />
+              <button class="delete-btn" onclick="this.parentElement.remove()" title="Remove image" style="
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: #ef4444;
+                color: white;
+                border: none;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10;
+              ">×</button>
               <div class="image-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center;" onclick="this.style.display='none'">
                 <img src="${event.target?.result}" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;" />
               </div>
@@ -468,11 +565,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0) {
               const range = selection.getRangeAt(0);
+              const beforeBr = document.createElement('br');
+              const afterBr = document.createElement('br');
+              range.insertNode(beforeBr);
+              range.setStartAfter(beforeBr);
               range.insertNode(img);
               range.setStartAfter(img);
-              range.setEndAfter(img);
+              range.insertNode(afterBr);
+              range.setStartAfter(afterBr);
             } else if (editorRef.current) {
+              const beforeBr = document.createElement('br');
+              const afterBr = document.createElement('br');
+              editorRef.current.appendChild(beforeBr);
               editorRef.current.appendChild(img);
+              editorRef.current.appendChild(afterBr);
             }
           };
           reader.readAsDataURL(file);
@@ -944,17 +1050,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={saveContent}
         disabled={!selectedIdea || !hasUnsavedChanges}
-        className={`fixed p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+        className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
           selectedIdea && hasUnsavedChanges
             ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
             : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
         }`}
-        style={{ 
-          right: '120px', 
-          left: 'auto',
-          position: 'fixed',
-          bottom: '24px'
-        }}
         title={
           !selectedIdea 
             ? 'Select an idea first' 
@@ -973,13 +1073,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       {/* Last Saved Indicator */}
       {lastSaved && (
         <div 
-          className="fixed text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30"
-          style={{ 
-            right: '120px', 
-            left: 'auto',
-            bottom: '90px',
-            position: 'fixed'
-          }}
+          className="fixed bottom-20 right-6 text-sm text-green-300 bg-gradient-to-r from-green-900/80 to-emerald-900/80 px-4 py-2 rounded-xl border border-green-500/30 shadow-lg backdrop-blur-md z-30"
         >
           ✅ Last saved: {lastSaved.toLocaleTimeString()}
         </div>
