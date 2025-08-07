@@ -699,11 +699,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 <div className="flex gap-2 mb-2">
                   {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
                     <button
-                      key={color}
-                      onClick={() => {
-                        setBackgroundColor(color);
-                        if (editorRef.current) {
-                          editorRef.current.style.backgroundColor = color;
                         }
                       }}
                       className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
