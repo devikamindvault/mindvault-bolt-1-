@@ -529,8 +529,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             {ideas.length === 0 ? (
               <div className="p-6 text-center">
                 <div className="text-4xl mb-3">💡</div>
-                <p className="text-white font-medium mb-2">No ideas created yet.</p>
-                <p className="text-gray-400 text-sm">Go to Ideas page to create your first idea!</p>
+                <p className="text-white font-medium mb-2" style={{ color: '#ffffff !important' }}>No ideas created yet.</p>
+                <p className="text-gray-400 text-sm" style={{ color: '#9ca3af !important' }}>Go to Ideas page to create your first idea!</p>
               </div>
             ) : (
               ideas.map((idea) => (
@@ -545,14 +545,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setShowIdeaDropdown(false);
                   }}
                   className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between group"
+                  style={{ backgroundColor: '#1e293b', color: '#ffffff' }}
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-lg">
                       {idea.isPinned ? '📌' : '💡'}
                     </div>
                     <div>
-                      <p className="text-white font-medium group-hover:text-purple-300 transition-colors">{idea.title}</p>
-                      <p className="text-gray-400 text-sm line-clamp-1 group-hover:text-gray-300 transition-colors">{idea.description}</p>
+                      <p className="font-medium transition-colors" style={{ color: '#ffffff' }}>{idea.title}</p>
+                      <p className="text-sm line-clamp-1 transition-colors" style={{ color: '#9ca3af' }}>{idea.description}</p>
                       {idea.category && (
                         <span className="inline-block mt-2 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
                           {idea.category}
@@ -561,7 +562,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     </div>
                   </div>
                   {selectedIdea?.id === idea.id && (
-                    <div className="text-green-400 text-xl font-bold">✓</div>
+                    <div className="text-xl font-bold" style={{ color: '#4ade80' }}>✓</div>
                   )}
                 </button>
               ))
