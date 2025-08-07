@@ -1092,7 +1092,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <div className="relative">
           <button
             onClick={() => setShowIdeaDropdown(!showIdeaDropdown)}
-            className={\`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
+            className={`w-full p-4 bg-slate-800 border-2 rounded-xl text-left flex items-center justify-between transition-all duration-300 ${
               selectedIdea 
                 ? 'border-purple-500 bg-gradient-to-r from-slate-800 to-purple-900/30' 
                 : 'border-slate-600 hover:border-slate-500'
@@ -1127,7 +1127,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <ChevronDown className={\`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
             </div>
           </button>
 
@@ -1154,12 +1154,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     <button
                       key={idea.id}
                       onClick={() => handleIdeaSelect(idea)}
-                      className={\`w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
+                      className={`w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
                         selectedIdea?.id === idea.id ? 'bg-purple-900/30 border-purple-500' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={\`w-2 h-2 rounded-full ${idea.isPinned ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${idea.isPinned ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
                         <div className="flex-1">
                           <h4 className="text-white font-semibold">{idea.title}</h4>
                           <p className="text-gray-400 text-sm mt-1 line-clamp-2">{idea.description}</p>
@@ -1188,7 +1188,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </div>
       </div>
 
-      <div className={\`editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md ${!selectedIdea ? 'opacity-50' : ''}`}>
+      <div className={`editor-toolbar bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 border-2 border-slate-600 rounded-t-2xl p-5 flex flex-wrap gap-4 items-center shadow-2xl backdrop-blur-md ${!selectedIdea ? 'opacity-50' : ''}`}>
         {/* Text Formatting */}
         <div className="toolbar-group flex gap-1 bg-gradient-to-r from-slate-700 to-slate-600 rounded-xl p-2 shadow-lg">
           <button onClick={() => execCommand('bold')} className="toolbar-button hover:bg-purple-600 transition-all duration-200" disabled={!selectedIdea} title="Bold">
@@ -1336,7 +1336,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         setBackgroundColor(color);
                         localStorage.setItem('editor-bg-color', color);
                         if (selectedIdea) {
-                          localStorage.setItem(\`idea-bg-${selectedIdea.id}`, color);
+                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
                         }
                         if (editorRef.current) {
                           editorRef.current.style.backgroundColor = color;
@@ -1358,7 +1358,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setBackgroundColor(e.target.value);
                     localStorage.setItem('editor-bg-color', e.target.value);
                     if (selectedIdea) {
-                      localStorage.setItem(\`idea-bg-${selectedIdea.id}`, e.target.value);
+                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, e.target.value);
                     }
                     if (editorRef.current) {
                       editorRef.current.style.backgroundColor = e.target.value;
@@ -1387,7 +1387,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         setTextColor(color);
                         execCommand('foreColor', color);
                         if (selectedIdea) {
-                          localStorage.setItem(\`idea-text-${selectedIdea.id}`, color);
+                          localStorage.setItem(`idea-text-${selectedIdea.id}`, color);
                         }
                         // Update existing content
                         if (editorRef.current) {
@@ -1409,7 +1409,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setTextColor(e.target.value);
                     execCommand('foreColor', e.target.value);
                     if (selectedIdea) {
-                      localStorage.setItem(\`idea-text-${selectedIdea.id}`, e.target.value);
+                      localStorage.setItem(`idea-text-${selectedIdea.id}`, e.target.value);
                     }
 
                     // Update existing content
@@ -1491,7 +1491,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <button
           onClick={saveContent}
           disabled={!selectedIdea || !hasUnsavedChanges}
-          className={\`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
+          className={`fixed bottom-6 right-6 p-4 rounded-2xl shadow-2xl transition-all duration-300 z-40 flex items-center gap-2 ${
             selectedIdea && hasUnsavedChanges
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white animate-pulse hover:scale-110'
               : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
@@ -1525,7 +1525,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       <button
         onClick={downloadAsPDF}
         disabled={isDownloading}
-        className={\`fixed bottom-6 left-1/2 transform -translate-x-1/2 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
+        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 p-5 rounded-2xl shadow-2xl transition-all duration-300 z-50 ${
           isDownloading 
             ? 'bg-gray-600 cursor-not-allowed' 
             : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-110 animate-bounce'
