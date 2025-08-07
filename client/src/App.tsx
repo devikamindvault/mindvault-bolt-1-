@@ -80,25 +80,25 @@ function App() {
           <nav className="flex gap-3">
             <button
               onClick={() => setCurrentPage('home')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium min-w-[120px] ${
                 currentPage === 'home' 
                   ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105' 
                   : 'bg-slate-700/50 text-gray-300 hover:bg-slate-600/50 hover:text-white'
               }`}
             >
               <Home className="w-5 h-5" />
-              Home
+              <span>Home</span>
             </button>
             <button
               onClick={() => setCurrentPage('ideas')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium min-w-[120px] ${
                 currentPage === 'ideas' 
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105' 
                   : 'bg-slate-700/50 text-gray-300 hover:bg-slate-600/50 hover:text-white'
               }`}
             >
               <Lightbulb className="w-5 h-5" />
-              Ideas
+              <span>Ideas</span>
             </button>
           </nav>
         </div>

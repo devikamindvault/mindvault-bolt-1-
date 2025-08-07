@@ -30,7 +30,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showIdeaDropdown, setShowIdeaDropdown] = useState(false);
-  const [backgroundColor, setBackgroundColor] = useState('#1f2937');
+  const [backgroundColor, setBackgroundColor] = useState(() => {
+    return localStorage.getItem('editor-bg-color') || '#1f2937';
+  });
   const [textColor, setTextColor] = useState('#ffffff');
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -83,35 +85,54 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
   useEffect(() => {
     if (selectedIdea && editorRef.current) {
-      const ideaContent = `
-        <div style="border: 3px solid #8b5cf6; border-radius: 16px; padding: 24px; margin-bottom: 32px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(219, 39, 119, 0.1) 100%); position: relative;">
-          <div style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #8b5cf6, #db2777); color: white; padding: 8px; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
-            ${selectedIdea.isPinned ? '📌' : '💡'}
+      // Load saved background for this idea or use default
+      const savedBg = localStorage.getItem(`idea-bg-${selectedIdea.id}`) || backgroundColor;
+      setBackgroundColor(savedBg);
+      
+      // Set the entire editor content to the idea template
+      editorRef.current.style.backgroundColor = savedBg;
+      editorRef.current.innerHTML = `
+        <div style="min-height: 100vh; padding: 40px; background: ${savedBg}; color: ${textColor}; font-family: Georgia, serif; line-height: 1.8;">
+          <div style="text-align: center; margin-bottom: 40px; position: relative;">
+            ${selectedIdea.isPinned ? `<div style="position: absolute; top: -20px; right: 20px; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1f2937; padding: 12px; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);">📌</div>` : ''}
+            <h1 style="color: #a855f7; font-size: 48px; font-weight: bold; margin: 0 0 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+              💡 ${selectedIdea.title}
+            </h1>
+            <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(219, 39, 119, 0.2)); border: 2px solid #8b5cf6; border-radius: 20px; padding: 30px; margin: 30px 0; backdrop-filter: blur(10px);">
+              <p style="font-size: 24px; font-style: italic; color: #e2e8f0; margin: 0; line-height: 1.6;">
+                "${selectedIdea.description}"
+              </p>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin: 30px 0;">
+              ${selectedIdea.category ? `<span style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">📂 ${selectedIdea.category}</span>` : ''}
+              ${selectedIdea.deadline ? `<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">📅 ${new Date(selectedIdea.deadline).toLocaleDateString()}</span>` : ''}
+              <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px 24px; border-radius: 25px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">✨ Created ${new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
+            </div>
           </div>
-          <h2 style="color: #a855f7; margin: 0 0 16px 0; font-size: 28px; font-weight: bold; display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 32px;">💡</span>
-            ${selectedIdea.title}
-          </h2>
-          <p style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6; font-style: italic;">
-            "${selectedIdea.description}"
-          </p>
-          <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; margin-top: 16px;">
-            ${selectedIdea.category ? `<span style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">📂 ${selectedIdea.category}</span>` : ''}
-            ${selectedIdea.deadline ? `<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">📅 ${new Date(selectedIdea.deadline).toLocaleDateString()}</span>` : ''}
-            <span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600;">✨ Created ${new Date(selectedIdea.createdAt).toLocaleDateString()}</span>
+          
+          <div style="border-top: 3px solid #8b5cf6; padding-top: 40px; margin-top: 40px;">
+            <h2 style="color: #a855f7; font-size: 32px; margin: 0 0 30px 0; text-align: center; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+              📝 Development Workspace
+            </h2>
+            
+            <div style="background: rgba(139, 92, 246, 0.1); border-left: 5px solid #8b5cf6; padding: 25px; margin: 25px 0; border-radius: 10px;">
+              <h3 style="color: #c084fc; font-size: 24px; margin: 0 0 15px 0;">🎯 Project Goals:</h3>
+              <ul style="color: #e2e8f0; font-size: 18px; line-height: 1.8; padding-left: 30px;">
+                <li style="margin-bottom: 10px;">What makes this idea unique and valuable?</li>
+                <li style="margin-bottom: 10px;">What resources and skills do you need?</li>
+                <li style="margin-bottom: 10px;">What are the key milestones and next steps?</li>
+              </ul>
+            </div>
+            
+            <div style="margin: 40px 0;">
+              <h3 style="color: #c084fc; font-size: 24px; margin: 0 0 20px 0;">💭 Your Thoughts & Progress:</h3>
+              <div style="min-height: 200px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 15px; border: 1px dashed #8b5cf6;">
+                <p style="color: #d1d5db; font-size: 18px; margin: 0;">Start writing your thoughts, plans, research, and progress updates here...</p>
+              </div>
+            </div>
           </div>
         </div>
-        <h3 style="color: #a855f7; font-size: 24px; margin: 32px 0 16px 0; border-bottom: 2px solid #8b5cf6; padding-bottom: 8px;">📝 Development Notes</h3>
-        <p style="color: #e2e8f0; font-size: 16px; line-height: 1.8;">Start developing your idea here... Add your thoughts, plans, research, and progress updates.</p>
-        <br>
-        <h3 style="color: #a855f7; font-size: 20px; margin: 24px 0 12px 0;">🎯 Key Points:</h3>
-        <ul style="color: #e2e8f0; font-size: 16px; line-height: 1.6; padding-left: 24px;">
-          <li style="margin-bottom: 8px;">What makes this idea unique?</li>
-          <li style="margin-bottom: 8px;">What resources do you need?</li>
-          <li style="margin-bottom: 8px;">What are the next steps?</li>
-        </ul>
       `;
-      editorRef.current.innerHTML = ideaContent;
     }
   }, [selectedIdea]);
 
@@ -507,6 +528,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   key={idea.id}
                   onClick={() => {
                     onSelectIdea(idea);
+                    localStorage.setItem('editor-bg-color', color);
+                    if (selectedIdea) {
+                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                    }
                     setShowIdeaDropdown(false);
                   }}
                   className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between"
@@ -691,8 +716,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   value={backgroundColor}
                   onChange={(e) => {
                     setBackgroundColor(e.target.value);
+                    localStorage.setItem('editor-bg-color', e.target.value);
+                    if (selectedIdea) {
+                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, e.target.value);
+                    }
                     if (editorRef.current) {
                       editorRef.current.style.backgroundColor = e.target.value;
+                      // Update the entire content background
+                      const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+                      if (contentDiv) {
+                        (contentDiv as HTMLElement).style.background = e.target.value;
+                      }
+                      // Update the entire content background
+                      const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+                      if (contentDiv) {
+                        (contentDiv as HTMLElement).style.background = color;
+                      }
                     }
                   }}
                   className="w-full h-10 rounded-lg border border-slate-600"
@@ -740,20 +779,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       
       <div 
         ref={editorRef}
-        className="rich-editor min-h-[600px] p-8 border border-slate-600 border-t-0 rounded-b-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+        className="rich-editor min-h-[600px] border border-slate-600 border-t-0 rounded-b-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all overflow-auto"
         contentEditable
         suppressContentEditableWarning={true}
         onPaste={handlePaste}
         style={{
           backgroundColor: backgroundColor,
           color: textColor,
-          fontSize: '16px',
-          lineHeight: '1.8',
-          fontFamily: 'Georgia, serif'
+          padding: selectedIdea ? '0' : '32px'
         }}
       >
         {!selectedIdea && (
-          <div style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+          <div style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '16px', lineHeight: '1.8', fontFamily: 'Georgia, serif' }}>
             <h3 style={{ color: '#a855f7', fontSize: '24px', marginBottom: '16px' }}>✨ Welcome to Mind Vault</h3>
             <p>Select an idea from the Ideas page to start developing it, or begin writing your thoughts here...</p>
             <br />
