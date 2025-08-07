@@ -480,17 +480,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                 <div className="flex items-center gap-2 mt-1">
                   {selectedIdea.category && (
                     <span className="px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full font-medium">
-                      if (selectedIdea) {
-                        localStorage.setItem(`idea-text-${selectedIdea.id}`, color);
-                      }
                       {selectedIdea.category}
-                      // Update existing content
-                      if (editorRef.current) {
-                        const titleElement = editorRef.current.querySelector('h1');
-                        const descElement = editorRef.current.querySelector('p');
-                        if (titleElement) titleElement.style.color = color;
-                        if (descElement) descElement.style.color = color;
-                      }
                     </span>
                   )}
                   {selectedIdea.isPinned && (
@@ -502,17 +492,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           </div>
           <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showIdeaDropdown ? 'rotate-180' : ''}`} />
         </button>
-                  if (selectedIdea) {
-                    localStorage.setItem(`idea-text-${selectedIdea.id}`, e.target.value);
-                  }
 
-                  // Update existing content
-                  if (editorRef.current) {
-                    const titleElement = editorRef.current.querySelector('h1');
-                    const descElement = editorRef.current.querySelector('p');
-                    if (titleElement) titleElement.style.color = e.target.value;
-                    if (descElement) descElement.style.color = e.target.value;
-                  }
         {showIdeaDropdown && (
           <div className="idea-dropdown absolute top-full left-0 right-0 mt-2 bg-slate-800 border-2 border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
             {ideas.length === 0 ? (
@@ -527,10 +507,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   key={idea.id}
                   onClick={() => {
                     onSelectIdea(idea);
-                    localStorage.setItem('editor-bg-color', backgroundColor);
-                    if (selectedIdea) {
-                      localStorage.setItem(`idea-bg-${selectedIdea.id}`, backgroundColor);
-                    }
                     setShowIdeaDropdown(false);
                   }}
                   className="w-full p-4 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 flex items-center justify-between group"
@@ -697,29 +673,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <div className="color-picker absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl p-4 z-50 w-64 shadow-2xl">
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Background Color</label>
-<div className="flex gap-2 mb-2">
-  {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
-    <button
-      key={color}
-      onClick={() => {
-        setBackgroundColor(color);
-        localStorage.setItem('editor-bg-color', color);
-        if (selectedIdea) {
-          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
-        }
-        if (editorRef.current) {
-          editorRef.current.style.backgroundColor = color;
-          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
-          if (contentDiv) {
-            (contentDiv as HTMLElement).style.background = color;
-          }
-        }
-      }}
-      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
-      style={{ backgroundColor: color }}
-    />
-  ))}
-</div>
+                <div className="flex gap-2 mb-2">
+                  {['#1f2937', '#0f172a', '#374151', '#1e293b', '#312e81', '#581c87'].map(color => (
+                    <button
+                      key={color}
+                      onClick={() => {
+                        setBackgroundColor(color);
+                        localStorage.setItem('editor-bg-color', color);
+                        if (selectedIdea) {
+                          localStorage.setItem(`idea-bg-${selectedIdea.id}`, color);
+                        }
+                        if (editorRef.current) {
+                          editorRef.current.style.backgroundColor = color;
+                          const contentDiv = editorRef.current.querySelector('div[style*="min-height: 100vh"]');
+                          if (contentDiv) {
+                            (contentDiv as HTMLElement).style.background = color;
+                          }
+                        }
+                      }}
+                      className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 <input
                   type="color"
                   value={backgroundColor}
@@ -755,6 +731,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       onClick={() => {
                         setTextColor(color);
                         execCommand('foreColor', color);
+                        if (selectedIdea) {
+                          localStorage.setItem(`idea-text-${selectedIdea.id}`, color);
+                        }
+                        // Update existing content
+                        if (editorRef.current) {
+                          const titleElement = editorRef.current.querySelector('h1');
+                          const descElement = editorRef.current.querySelector('p');
+                          if (titleElement) titleElement.style.color = color;
+                          if (descElement) descElement.style.color = color;
+                        }
                       }}
                       className="w-8 h-8 rounded-lg border-2 border-slate-600 hover:border-white transition-colors"
                       style={{ backgroundColor: color }}
@@ -767,10 +753,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                   onChange={(e) => {
                     setTextColor(e.target.value);
                     execCommand('foreColor', e.target.value);
-                    const titleElement = editorRef.current.querySelector('h1');
-                    const descElement = editorRef.current.querySelector('p');
-                    if (titleElement) titleElement.style.color = textColor;
-                    if (descElement) descElement.style.color = textColor;
+                    if (selectedIdea) {
+                      localStorage.setItem(`idea-text-${selectedIdea.id}`, e.target.value);
+                    }
+
+                    // Update existing content
+                    if (editorRef.current) {
+                      const titleElement = editorRef.current.querySelector('h1');
+                      const descElement = editorRef.current.querySelector('p');
+                      if (titleElement) titleElement.style.color = e.target.value;
+                      if (descElement) descElement.style.color = e.target.value;
+                    }
                   }}
                   className="w-full h-10 rounded-lg border border-slate-600"
                 />
