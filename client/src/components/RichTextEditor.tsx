@@ -389,32 +389,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           if (file.type.startsWith('image/')) {
             const imageUrl = isStoredInDB ? await getFileFromIndexedDB(fileId) : fileId;
             const imageHtml = `
-              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 4px 8px; padding: 0; position: relative; vertical-align: middle;">
-                <div class="image-preview" style="background: #374151; border: 2px solid #4b5563; border-radius: 8px; padding: 6px; position: relative; display: inline-block;">
-                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 150px; max-height: 100px; object-fit: contain; cursor: pointer; border-radius: 4px; display: block;" />
-                  <div class="media-caption" style="margin-top: 4px; font-size: 10px; color: #9ca3af; text-align: center; word-break: break-word;">${file.name}${!isStoredInDB ? ' (temp)' : ''}</div>
-                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
-                </div>
-              </div>
+              <span class="media-container" contenteditable="false" style="display: inline-block; margin: 2px 4px; padding: 0; position: relative; vertical-align: top;">
+                <span class="image-preview" style="background: #374151; border: 1px solid #4b5563; border-radius: 6px; padding: 3px; position: relative; display: inline-block;">
+                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 120px; max-height: 80px; object-fit: contain; cursor: pointer; border-radius: 3px; display: block;" />
+                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
+                </span>
+              </span>
             `;
             insertMediaAtCursor(imageHtml);
           } else {
             const docIcon = getDocumentIcon(file.type);
             const documentHtml = `
-              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 4px 8px; padding: 0; position: relative; vertical-align: middle;">
-                <div class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: flex; align-items: center; padding: 8px; background: #374151; border: 2px solid #4b5563; border-radius: 8px; cursor: pointer; max-width: 200px; position: relative;">
-                  <div class="doc-icon" style="font-size: 24px; margin-right: 12px; flex-shrink: 0;">${docIcon}</div>
+              <span class="media-container" contenteditable="false" style="display: inline-block; margin: 2px 4px; padding: 0; position: relative; vertical-align: top;">
+                <span class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: inline-flex; align-items: center; padding: 4px 6px; background: #374151; border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; max-width: 160px; position: relative;">
+                  <span class="doc-icon" style="font-size: 16px; margin-right: 6px; flex-shrink: 0;">${docIcon}</span>
                   <div class="doc-info" style="flex: 1;">
-                    <div class="doc-name" style="font-weight: 600; color: #e5e7eb; font-size: 12px; margin-bottom: 2px; word-break: break-word;">${file.name}${!isStoredInDB ? ' (temp)' : ''}</div>
-                    <div class="doc-type" style="font-size: 10px; color: #9ca3af;">${file.type || 'Unknown'}</div>
-                    <div class="doc-actions" style="display: flex; gap: 4px; margin-top: 4px;">
-                      <button onclick="event.stopPropagation(); window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; border: 1px solid #4b5563; background: #374151; color: #e5e7eb; cursor: pointer;">View</button>
-                      <button onclick="event.stopPropagation(); window.downloadFile && window.downloadFile('${fileId}', '${file.name}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; border: 1px solid #4b5563; background: #374151; color: #e5e7eb; cursor: pointer;">Download</button>
-                    </div>
+                    <div class="doc-name" style="font-weight: 600; color: #e5e7eb; font-size: 10px; word-break: break-word; line-height: 1.2;">${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</div>
                   </div>
-                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
-                </div>
-              </div>
+                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
+                </span>
+              </span>
             `;
             insertMediaAtCursor(documentHtml);
           }
