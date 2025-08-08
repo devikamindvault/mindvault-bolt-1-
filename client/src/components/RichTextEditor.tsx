@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, List, ListOrdered, Link, Image, FileText, Smile, Mic, Download, Save, Trash2, Eye, X, Type, AlignLeft, AlignCenter, AlignRight, AlignJustify, Undo, Redo, Plus, Search, Calendar, Clock, Tag, Star, Upload, File, Video, Music, Archive, Code, Hash, Quote, Strikethrough, Subscript, Superscript, Palette, Highlighter, RotateCcw, RotateCw, ZoomIn, ZoomOut, Copy, Cast as Paste, Nut as Cut, ChevronDown, Settings, Filter, SortAsc, SortDesc, Grid, Layout, Maximize, Minimize, RefreshCw, Share, Printer as Print, BookOpen, Bookmark, Flag, Heart, MessageCircle, Send, Phone, Mail, Globe, MapPin, User, Users, Home, Building, Car, Plane, Train, Ship, Bike, Wallet as Walk, Coffee, Pizza, Camera, Headphones, Gamepad2, Tv, Radio, Battery, Wifi, Bluetooth, Usb, HardDrive, Cpu, MemoryStick as Memory, Monitor, Keyboard, Mouse, Printer, Scan as Scanner, Webcam, Microscope as Microphone, Speaker, Volume1, Volume2, VolumeX, Play, Pause, Store as Stop, SkipBack, SkipForward, Repeat, Shuffle, FastForward, Rewind, SwordIcon as Record, Projector as Eject, Power, Settings2, PenTool as Tool, Wrench, Hammer, HardDrive as Screwdriver, Ruler, Scissors, PaintBucket, Brush, Pen, Pencil, Eraser, Pipette, Crop, Move, Rotate3D as RotateLeft, Rotate3D as RotateRight, FlipHorizontal, FlipVertical, Layers, Group, Ungroup, BringToFront, SendToBack, Lock, Unlock, Dribbble as Visible, LucidePen as Hidden, Locate as Duplicate, Delete, Archive as ArchiveIcon, Folder, FolderOpen, FolderPlus, FileIcon, FilePlus, FileX, FileCheck, FileClock, FileImage, FileVideo, FileAudio, FileCode, FileSpreadsheet, FileBarChart, FilePieChart, FileLineChart, FileText as FileTextIcon, Paperclip, Link2, ExternalLink, Download as DownloadIcon, Upload as UploadIcon, Cloud, CloudDownload, CloudUpload, Server, Database, HardDriveIcon, IdCard as SdCard, UsbIcon, WifiIcon, BluetoothIcon, Signal, Antenna, Satellite, Router, Code as Modem, NetworkIcon, EthernetPort, Cable, Plug, Pocket as Socket, Battery as BatteryIcon, BatteryLow, Zap, Sun, Moon, Star as StarIcon, Cloud as CloudIcon, CloudRain, CloudSnow, CloudLightning, Thermometer, Droplets, Wind, Compass, Navigation, Map, MapPin as MapPinIcon, Route, Car as CarIcon, Truck, Bus, CarTaxiFront as Taxi, Recycle as Motorcycle, Recycle as Bicycle, NotebookIcon as Scooter, Keyboard as Skateboard, PaintRoller as Roller, Footprints, Plane as PlaneIcon, HeaterIcon as Helicopter, Rocket, Bot as Boat, Anchor, Sailboat, Ship as ShipIcon, ChartLine as Submarine, Train as TrainIcon, Drama as Tram, Droplet as Metro, Binoculars as Funicular, Cable as Cableway, Calculator as Escalator, Calculator as Elevator, Stars as Stairs, DoorOpen as Door, AppWindow as Window, Book as Roof, Radiation as Foundation, ToyBrick as Brick, CigaretteIcon as Concrete, Book as Wood, HandMetal as Metal, Glasses as Glass, Joystick as Plastic, Ruler as Rubber, ToyBrick as Fabric, Feather as Leather, Paperclip as Paper, Keyboard as Cardboard, Bone as Stone, Hand as Sand, Heater as Water, Siren as Fire, Earth, AirVent as Air, CloudLightning as Lightning, IceCream as Ice, Stamp as Steam, AlarmSmoke as Smoke, Bus as Dust, Cloud as Mud, File as Oil, Cast as Gas, LineSquiggle as Liquid, Sliders as Solid, Power as Powder, Italic as Crystal, Dam as Foam, Gem as Gel, Lightbulb } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bold, Italic, Upload, FileText, X, Download, Save, Trash2, Lightbulb, ChevronDown, Smile } from 'lucide-react';
 import VoiceRecorder from './VoiceRecorder';
 import jsPDF from 'jspdf';
-import html2canvas from 'html-to-image';
 
 interface Idea {
   id: string;
@@ -12,14 +11,6 @@ interface Idea {
   deadline: string;
   isPinned: boolean;
   createdAt: string;
-}
-
-interface EditEntry {
-  id: string;
-  content: string;
-  timestamp: string;
-  title: string;
-  description: string;
 }
 
 interface RichTextEditorProps {
@@ -37,158 +28,125 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showIdeaSelector, setShowIdeaSelector] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  
   const editorRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Common emojis for quick access
   const commonEmojis = [
     '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
     '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
     '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
-    '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
-    '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
-    '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗',
-    '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯',
-    '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐',
-    '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈',
-    '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾'
+    '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣'
   ];
 
+  // Auto-save functionality
+  const autoSave = useCallback(() => {
+    if (selectedIdea && content) {
+      const key = `mindvault-content-${selectedIdea.id}`;
+      localStorage.setItem(key, content);
+      console.log('Auto-saved content');
+    }
+  }, [selectedIdea, content]);
+
+  // Set up auto-save timer
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    if (selectedIdea && content) {
+      autoSaveTimeoutRef.current = setTimeout(autoSave, 30000); // 30 seconds
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [content, selectedIdea, autoSave]);
+
+  // Load content when idea changes
   useEffect(() => {
     if (selectedIdea) {
-      loadIdeaContent(selectedIdea.id);
+      const key = `mindvault-content-${selectedIdea.id}`;
+      const savedContent = localStorage.getItem(key);
+      setContent(savedContent || '');
+      if (editorRef.current) {
+        editorRef.current.innerHTML = savedContent || '';
+      }
     } else {
       setContent('');
+      if (editorRef.current) {
+        editorRef.current.innerHTML = '';
+      }
     }
   }, [selectedIdea]);
 
-  const loadIdeaContent = async (ideaId: string) => {
-    try {
-      const request = indexedDB.open('IdeaMediaDB', 3);
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowImageModal(false);
+        setShowDocumentModal(false);
+        setShowEmojiPicker(false);
+        setShowIdeaSelector(false);
+      }
       
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains('media')) {
-          db.createObjectStore('media', { keyPath: 'id' });
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault();
+            handleSave();
+            break;
+          case 'b':
+            e.preventDefault();
+            execCommand('bold');
+            break;
+          case 'i':
+            e.preventDefault();
+            execCommand('italic');
+            break;
         }
-        if (!db.objectStoreNames.contains('history')) {
-          db.createObjectStore('history', { keyPath: 'id' });
-        }
-      };
-      
-      request.onsuccess = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        const transaction = db.transaction(['history'], 'readonly');
-        const store = transaction.objectStore('history');
-        const getRequest = store.get(`idea-${ideaId}`);
-        
-        getRequest.onsuccess = () => {
-          if (getRequest.result && getRequest.result.entries.length > 0) {
-            const latestEntry = getRequest.result.entries[getRequest.result.entries.length - 1];
-            setContent(latestEntry.content || '');
-          } else {
-            // Try to migrate from localStorage if exists
-            const legacyContent = localStorage.getItem(`idea-content-${ideaId}`);
-            if (legacyContent) {
-              setContent(legacyContent);
-              localStorage.removeItem(`idea-content-${ideaId}`);
-            } else {
-              setContent('');
-            }
-          }
-        };
-        
-        getRequest.onerror = () => {
-          console.error('Error loading content from IndexedDB');
-          setContent('');
-        };
-      };
-      
-      request.onerror = () => {
-        console.error('Error opening IndexedDB');
-        setContent('');
-      };
-    } catch (error) {
-      console.error('Error in loadIdeaContent:', error);
-      setContent('');
-    }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIdea, content]);
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
   };
 
-  const saveToIndexedDB = async (ideaId: string, content: string, title: string, description: string) => {
-    try {
-      const request = indexedDB.open('IdeaMediaDB', 3);
-      
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains('media')) {
-          db.createObjectStore('media', { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains('history')) {
-          db.createObjectStore('history', { keyPath: 'id' });
-        }
-      };
-      
-      request.onsuccess = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        const transaction = db.transaction(['history'], 'readwrite');
-        const store = transaction.objectStore('history');
-        
-        const getRequest = store.get(`idea-${ideaId}`);
-        
-        getRequest.onsuccess = () => {
-          const existingData = getRequest.result;
-          const entries = existingData ? existingData.entries : [];
-          
-          const newEntry: EditEntry = {
-            id: Date.now().toString(),
-            content,
-            timestamp: new Date().toISOString(),
-            title,
-            description
-          };
-          
-          entries.push(newEntry);
-          
-          const putRequest = store.put({
-            id: `idea-${ideaId}`,
-            entries
-          });
-          
-          putRequest.onsuccess = () => {
-            console.log('Content saved to IndexedDB successfully');
-          };
-          
-          putRequest.onerror = () => {
-            console.error('Error saving to IndexedDB');
-          };
-        };
-        
-        getRequest.onerror = () => {
-          console.error('Error getting existing data from IndexedDB');
-        };
-      };
-      
-      request.onerror = () => {
-        console.error('Error opening IndexedDB for saving');
-      };
-    } catch (error) {
-      console.error('Error in saveToIndexedDB:', error);
-    }
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
   };
 
-  const handleSave = () => {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    
     if (!selectedIdea) {
       alert('Please select an idea first');
       return;
     }
 
-    try {
-      saveToIndexedDB(selectedIdea.id, content, selectedIdea.title, selectedIdea.description);
-      alert('Content saved successfully!');
-    } catch (error) {
-      console.error('Error saving content:', error);
-      alert('Error saving content. Please try again.');
-    }
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        handleImageUpload(file);
+      } else {
+        handleDocumentUpload(file);
+      }
+    });
   };
 
   const execCommand = (command: string, value?: string) => {
@@ -198,336 +156,190 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
   };
 
-  const insertEmoji = (emoji: string) => {
-    insertTextAtCursor(emoji);
-    setShowEmojiPicker(false);
-  };
+  const insertAtCursor = (html: string) => {
+    if (!editorRef.current) return;
 
-  const insertTextAtCursor = (text: string) => {
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       range.deleteContents();
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
+      
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      const fragment = document.createDocumentFragment();
+      
+      while (div.firstChild) {
+        fragment.appendChild(div.firstChild);
+      }
+      
+      range.insertNode(fragment);
+      range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
-    } else if (editorRef.current) {
-      editorRef.current.focus();
-      const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false);
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
+    } else {
+      editorRef.current.innerHTML += html;
     }
     
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
+    setContent(editorRef.current.innerHTML);
+    editorRef.current.focus();
+  };
+
+  const validateFile = (file: File, type: 'image' | 'document'): boolean => {
+    const maxSize = type === 'image' ? 10 * 1024 * 1024 : 25 * 1024 * 1024; // 10MB for images, 25MB for docs
+    
+    if (file.size > maxSize) {
+      alert(`File too large. Maximum size is ${type === 'image' ? '10MB' : '25MB'}`);
+      return false;
+    }
+
+    if (type === 'image') {
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Invalid image format. Supported: JPG, PNG, GIF, WebP');
+        return false;
+      }
+    } else {
+      const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'text/markdown'
+      ];
+      if (!validTypes.includes(file.type) && !file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
+        alert('Invalid document format. Supported: PDF, DOC, DOCX, TXT');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!validateFile(file, 'image')) return;
+    
+    setIsUploading(true);
+    
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string;
+        const imageId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const imageHtml = `
+          <span class="image-wrapper" contenteditable="false" style="display: inline-block; position: relative; margin: 2px; vertical-align: top;">
+            <img 
+              id="${imageId}"
+              src="${imageUrl}" 
+              alt="${file.name}"
+              onclick="window.openImagePreview && window.openImagePreview('${imageUrl}')"
+              style="max-width: 200px; max-height: 150px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; resize: both; overflow: hidden; display: block;"
+            />
+            <button 
+              onclick="this.parentElement.remove(); window.updateContent && window.updateContent()"
+              style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;"
+            >×</button>
+          </span>
+        `;
+        
+        insertAtCursor(imageHtml);
+        setIsUploading(false);
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image. Please try again.');
+      setIsUploading(false);
     }
   };
 
-  const insertMediaAtCursor = (mediaHtml: string) => {
+  const handleDocumentUpload = async (file: File) => {
+    if (!validateFile(file, 'document')) return;
+    
+    setIsUploading(true);
+    
     try {
-      if (editorRef.current) {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          // Insert at current cursor position
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-          
-          // Create a temporary div to hold the HTML
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mediaHtml;
-          const mediaElement = tempDiv.firstChild;
-          
-          if (mediaElement) {
-            range.insertNode(mediaElement);
-            
-            // Move cursor after the inserted media
-            range.setStartAfter(mediaElement);
-            range.setEndAfter(mediaElement);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        } else {
-          // Fallback: insert at end if no selection
-          const currentContent = editorRef.current.innerHTML;
-          const newContent = currentContent + mediaHtml;
-          editorRef.current.innerHTML = newContent;
-        }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        const docId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
-        setContent(editorRef.current.innerHTML);
-        editorRef.current.focus();
+        // Store document data
+        const docData = {
+          id: docId,
+          name: file.name,
+          type: file.type,
+          content: content,
+          size: file.size
+        };
+        
+        localStorage.setItem(`doc-${docId}`, JSON.stringify(docData));
+        
+        const getDocIcon = (type: string) => {
+          if (type.includes('pdf')) return '📄';
+          if (type.includes('word') || type.includes('document')) return '📝';
+          if (type.includes('text')) return '📃';
+          return '📎';
+        };
+        
+        const documentHtml = `
+          <span class="document-wrapper" contenteditable="false" style="display: inline-block; position: relative; margin: 2px 4px; vertical-align: top;">
+            <span 
+              onclick="window.openDocumentPreview && window.openDocumentPreview('${docId}')"
+              style="display: inline-flex; align-items: center; padding: 6px 10px; background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; max-width: 200px; font-size: 14px; color: #374151;"
+            >
+              <span style="font-size: 18px; margin-right: 8px;">${getDocIcon(file.type)}</span>
+              <span style="font-weight: 500; truncate: true;">${file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}</span>
+            </span>
+            <button 
+              onclick="this.parentElement.remove(); window.updateContent && window.updateContent()"
+              style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;"
+            >×</button>
+          </span>
+        `;
+        
+        insertAtCursor(documentHtml);
+        setIsUploading(false);
+      };
+      
+      if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
       }
     } catch (error) {
-      console.error('Error inserting media at cursor:', error);
-      if (editorRef.current) {
-        editorRef.current.innerHTML += mediaHtml;
-        setContent(editorRef.current.innerHTML);
-      }
+      console.error('Error uploading document:', error);
+      alert('Error uploading document. Please try again.');
+      setIsUploading(false);
     }
   };
 
-  const storeFileInIndexedDB = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const request = indexedDB.open('IdeaMediaDB', 3);
-        
-        request.onupgradeneeded = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          if (!db.objectStoreNames.contains('media')) {
-            db.createObjectStore('media', { keyPath: 'id' });
-          }
-          if (!db.objectStoreNames.contains('history')) {
-            db.createObjectStore('history', { keyPath: 'id' });
-          }
-        };
-        
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          const transaction = db.transaction(['media'], 'readwrite');
-          const store = transaction.objectStore('media');
-          
-          const fileId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          
-          const fileData = {
-            id: fileId,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            file: file,
-            timestamp: new Date().toISOString()
-          };
-          
-          const putRequest = store.put(fileData);
-          
-          putRequest.onsuccess = () => {
-            resolve(fileId);
-          };
-          
-          putRequest.onerror = () => {
-            console.error('Error storing file in IndexedDB');
-            const fallbackUrl = URL.createObjectURL(file);
-            resolve(fallbackUrl);
-          };
-        };
-        
-        request.onerror = () => {
-          console.error('Error opening IndexedDB for file storage');
-          const fallbackUrl = URL.createObjectURL(file);
-          resolve(fallbackUrl);
-        };
-      } catch (error) {
-        console.error('Error in storeFileInIndexedDB:', error);
-        const fallbackUrl = URL.createObjectURL(file);
-        resolve(fallbackUrl);
-      }
-    });
+  const handleImageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach(handleImageUpload);
+    }
+    e.target.value = '';
   };
 
-  const getFileFromIndexedDB = async (fileId: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        const request = indexedDB.open('IdeaMediaDB', 3);
-        
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          const transaction = db.transaction(['media'], 'readonly');
-          const store = transaction.objectStore('media');
-          const getRequest = store.get(fileId);
-          
-          getRequest.onsuccess = () => {
-            if (getRequest.result && getRequest.result.file) {
-              const url = URL.createObjectURL(getRequest.result.file);
-              resolve(url);
-            } else {
-              reject(new Error('File not found'));
-            }
-          };
-          
-          getRequest.onerror = () => {
-            reject(new Error('Error retrieving file'));
-          };
-        };
-        
-        request.onerror = () => {
-          reject(new Error('Error opening IndexedDB'));
-        };
-      } catch (error) {
-        reject(error);
-      }
-    });
+  const handleDocumentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach(handleDocumentUpload);
+    }
+    e.target.value = '';
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
+  const handleSave = () => {
     if (!selectedIdea) {
-      alert('Please select an idea first to upload files');
-      event.target.value = '';
+      alert('Please select an idea first');
       return;
     }
 
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        try {
-          const fileId = await storeFileInIndexedDB(file);
-          const isStoredInDB = !fileId.startsWith('blob:');
-          
-          if (file.type.startsWith('image/')) {
-            const imageUrl = isStoredInDB ? await getFileFromIndexedDB(fileId) : fileId;
-            const imageHtml = `
-              <span class="media-container" contenteditable="false" style="display: inline-block; margin: 2px 4px; padding: 0; position: relative; vertical-align: top;">
-                <span class="image-preview" style="background: #374151; border: 1px solid #4b5563; border-radius: 6px; padding: 3px; position: relative; display: inline-block;">
-                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 120px; max-height: 80px; object-fit: contain; cursor: pointer; border-radius: 3px; display: block;" />
-                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
-                </span>
-              </span>
-            `;
-            insertMediaAtCursor(imageHtml);
-          } else {
-            const docIcon = getDocumentIcon(file.type);
-            const documentHtml = `
-              <span class="media-container" contenteditable="false" style="display: inline-block; margin: 2px 4px; padding: 0; position: relative; vertical-align: top;">
-                <span class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: inline-flex; align-items: center; padding: 4px 6px; background: #374151; border: 1px solid #4b5563; border-radius: 6px; cursor: pointer; max-width: 160px; position: relative;">
-                  <span class="doc-icon" style="font-size: 16px; margin-right: 6px; flex-shrink: 0;">${docIcon}</span>
-                  <div class="doc-info" style="flex: 1;">
-                    <div class="doc-name" style="font-weight: 600; color: #e5e7eb; font-size: 10px; word-break: break-word; line-height: 1.2;">${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</div>
-                  </div>
-                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
-                </span>
-              </span>
-            `;
-            insertMediaAtCursor(documentHtml);
-          }
-        } catch (error) {
-          console.error(`Error uploading file ${file.name}:`, error);
-          alert(`Failed to upload ${file.name}. ${error instanceof Error ? error.message : 'Please try again.'}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error in file upload process:', error);
-      alert('Error uploading files. Please try again.');
-    }
-    
-    event.target.value = '';
-  };
-
-  const getDocumentIcon = (mimeType: string): string => {
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
-    if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📈';
-    if (mimeType.includes('text')) return '📃';
-    if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('archive')) return '🗜️';
-    if (mimeType.includes('audio')) return '🎵';
-    if (mimeType.includes('video')) return '🎬';
-    return '📎';
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  // Global functions for media handling
-  useEffect(() => {
-    (window as any).openImageModal = (src: string) => {
-      setSelectedImage(src);
-      setShowImageModal(true);
-    };
-
-    (window as any).openDocumentModal = async (name: string, type: string, fileId: string) => {
-      try {
-        if (fileId.startsWith('blob:')) {
-          setSelectedDocument({ name, type, content: 'File content not available for temporary files.' });
-        } else {
-          const request = indexedDB.open('IdeaMediaDB', 3);
-          request.onsuccess = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-            const transaction = db.transaction(['media'], 'readonly');
-            const store = transaction.objectStore('media');
-            const getRequest = store.get(fileId);
-            
-            getRequest.onsuccess = () => {
-              if (getRequest.result && getRequest.result.file) {
-                const file = getRequest.result.file;
-                if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                    setSelectedDocument({ 
-                      name, 
-                      type, 
-                      content: e.target?.result as string || 'Could not read file content.' 
-                    });
-                  };
-                  reader.readAsText(file);
-                } else {
-                  setSelectedDocument({ 
-                    name, 
-                    type, 
-                    content: `File: ${name}\nType: ${type}\nSize: ${formatFileSize(file.size)}\n\nThis file type cannot be previewed as text.` 
-                  });
-                }
-              } else {
-                setSelectedDocument({ name, type, content: 'File not found.' });
-              }
-            };
-          };
-        }
-        setShowDocumentModal(true);
-      } catch (error) {
-        console.error('Error opening document modal:', error);
-        setSelectedDocument({ name, type, content: 'Error loading document.' });
-        setShowDocumentModal(true);
-      }
-    };
-
-    (window as any).downloadFile = async (fileId: string, fileName: string) => {
-      try {
-        if (fileId.startsWith('blob:')) {
-          const a = document.createElement('a');
-          a.href = fileId;
-          a.download = fileName;
-          a.click();
-        } else {
-          const url = await getFileFromIndexedDB(fileId);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      } catch (error) {
-        console.error('Error downloading file:', error);
-        alert('Error downloading file. Please try again.');
-      }
-    };
-
-    return () => {
-      delete (window as any).openImageModal;
-      delete (window as any).openDocumentModal;
-      delete (window as any).downloadFile;
-    };
-  }, []);
-
-  const handleVoiceTranscription = (text: string) => {
-    insertTextAtCursor(` ${text} `);
+    const key = `mindvault-content-${selectedIdea.id}`;
+    localStorage.setItem(key, content);
+    alert('Content saved successfully!');
   };
 
   const exportToPDF = async () => {
@@ -539,210 +351,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     try {
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 20;
-      const maxWidth = pageWidth - (margin * 2);
       let yPosition = margin;
 
-      // Title page
-      pdf.setFontSize(24);
+      // Title
+      pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
       pdf.text(selectedIdea.title, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 20;
 
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Category: ${selectedIdea.category || 'Uncategorized'}`, margin, yPosition);
-      yPosition += 10;
-      pdf.text(`Created: ${new Date(selectedIdea.createdAt).toLocaleDateString()}`, margin, yPosition);
-      yPosition += 10;
-      if (selectedIdea.deadline) {
-        pdf.text(`Deadline: ${new Date(selectedIdea.deadline).toLocaleDateString()}`, margin, yPosition);
-        yPosition += 10;
-      }
-
-      // Description
-      yPosition += 10;
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Description:', margin, yPosition);
-      yPosition += 10;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      const descriptionLines = pdf.splitTextToSize(selectedIdea.description, maxWidth);
-      pdf.text(descriptionLines, margin, yPosition);
-      yPosition += descriptionLines.length * 6 + 20;
-
-      // New page for content
-      pdf.addPage();
-      yPosition = margin;
-
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Content:', margin, yPosition);
-      yPosition += 15;
-
-      // Parse HTML content
+      // Content (simplified text extraction)
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = content;
+      const textContent = tempDiv.textContent || tempDiv.innerText || '';
       
-      let mediaCounter = 1;
-      let imageCounter = 1;
-      let docCounter = 1;
-      const mediaItems: Array<{type: 'image' | 'document', name: string, src?: string}> = [];
-
-      // Process content and replace media with placeholders
-      const processNode = (node: Node): string => {
-        if (node.nodeType === Node.TEXT_NODE) {
-          return node.textContent || '';
-        }
-        
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as Element;
-          
-          if (element.classList.contains('media-container')) {
-            const img = element.querySelector('img');
-            const docPreview = element.querySelector('.document-preview');
-            
-            if (img) {
-              const imgName = img.alt || `Image ${imageCounter}`;
-              mediaItems.push({type: 'image', name: imgName, src: img.src});
-              return `\n\n[📷 INTERACTIVE IMAGE ${imageCounter}: ${imgName} - CLICK TO PREVIEW]\n\n`;
-            } else if (docPreview) {
-              const docName = docPreview.querySelector('.doc-name')?.textContent || `Document ${docCounter}`;
-              mediaItems.push({type: 'document', name: docName});
-              return `\n\n[📄 INTERACTIVE DOCUMENT ${docCounter}: ${docName} - CLICK TO PREVIEW]\n\n`;
-            }
-          }
-          
-          // Handle other HTML elements
-          let result = '';
-          for (let i = 0; i < node.childNodes.length; i++) {
-            result += processNode(node.childNodes[i]);
-          }
-          
-          // Add formatting based on element type
-          switch (element.tagName?.toLowerCase()) {
-            case 'h1': return `\n\n${result.toUpperCase()}\n`;
-            case 'h2': return `\n\n${result}\n`;
-            case 'h3': return `\n${result}\n`;
-            case 'p': return `\n${result}\n`;
-            case 'br': return '\n';
-            case 'strong': case 'b': return `**${result}**`;
-            case 'em': case 'i': return `*${result}*`;
-            case 'u': return `_${result}_`;
-            case 'li': return `• ${result}\n`;
-            case 'ul': case 'ol': return `\n${result}\n`;
-            default: return result;
-          }
-        }
-        
-        return '';
-      };
-
-      const processedContent = processNode(tempDiv);
-      
-      // Add processed content to PDF
-      pdf.setFontSize(11);
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'normal');
-      const contentLines = pdf.splitTextToSize(processedContent, maxWidth);
-      
-      for (let i = 0; i < contentLines.length; i++) {
-        if (yPosition > pageHeight - margin) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        
-        const line = contentLines[i];
-        
-        // Style interactive media placeholders
-        if (line.includes('[📷 INTERACTIVE IMAGE') || line.includes('[📄 INTERACTIVE DOCUMENT')) {
-          if (line.includes('📷')) {
-            pdf.setFillColor(59, 130, 246); // Blue for images
-          } else {
-            pdf.setFillColor(34, 197, 94); // Green for docs
-          }
-          pdf.rect(margin - 2, yPosition - 4, maxWidth + 4, 8, 'F');
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(line, margin, yPosition);
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFont('helvetica', 'normal');
-        } else {
-          pdf.text(line, margin, yPosition);
-        }
-        
-        yPosition += 6;
-      }
+      const lines = pdf.splitTextToSize(textContent, pageWidth - (margin * 2));
+      pdf.text(lines, margin, yPosition);
 
-      // Add interactive media guide page
-      if (mediaItems.length > 0) {
-        pdf.addPage();
-        yPosition = margin;
-        
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Interactive Media Guide', pageWidth / 2, yPosition, { align: 'center' });
-        yPosition += 20;
-        
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('This PDF contains interactive elements. Click on the colored boxes to preview media:', margin, yPosition);
-        yPosition += 15;
-        
-        mediaItems.forEach((item, index) => {
-          if (yPosition > pageHeight - margin) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-          
-          const color = item.type === 'image' ? [59, 130, 246] : [34, 197, 94];
-          const icon = item.type === 'image' ? '📷' : '📄';
-          const typeText = item.type === 'image' ? 'Image' : 'Document';
-          
-          pdf.setFillColor(color[0], color[1], color[2]);
-          pdf.rect(margin, yPosition - 4, 8, 8, 'F');
-          pdf.setTextColor(255, 255, 255);
-          pdf.text(icon, margin + 2, yPosition + 1);
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(`${typeText} ${index + 1}: ${item.name}`, margin + 15, yPosition + 1);
-          
-          yPosition += 12;
-        });
-        
-        // Add usage instructions
-        pdf.addPage();
-        yPosition = margin;
-        
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('How to Use Interactive Features', pageWidth / 2, yPosition, { align: 'center' });
-        yPosition += 20;
-        
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'normal');
-        const instructions = [
-          '1. Open this PDF in a modern PDF viewer (Adobe Acrobat, Chrome, Firefox)',
-          '2. Look for colored boxes with "CLICK TO PREVIEW" text',
-          '3. Click on these boxes to view the associated media',
-          '4. Blue boxes contain images, green boxes contain documents',
-          '5. For best experience, use the PDF in digital format rather than printing'
-        ];
-        
-        instructions.forEach(instruction => {
-          if (yPosition > pageHeight - margin) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-          pdf.text(instruction, margin, yPosition);
-          yPosition += 10;
-        });
-      }
-
-      // Save the PDF
-      pdf.save(`${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_idea.pdf`);
-      
+      pdf.save(`${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       alert('Error exporting to PDF. Please try again.');
@@ -758,6 +386,60 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
   };
 
+  const insertEmoji = (emoji: string) => {
+    insertAtCursor(emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleVoiceTranscription = (text: string) => {
+    insertAtCursor(` ${text} `);
+  };
+
+  // Global functions for media handling
+  useEffect(() => {
+    (window as any).openImagePreview = (src: string) => {
+      setSelectedImage(src);
+      setShowImageModal(true);
+    };
+
+    (window as any).openDocumentPreview = (docId: string) => {
+      const docData = localStorage.getItem(`doc-${docId}`);
+      if (docData) {
+        const doc = JSON.parse(docData);
+        
+        let content = '';
+        if (doc.type.includes('pdf')) {
+          content = 'PDF preview not available in this view. Download to view the full document.';
+        } else if (doc.type.includes('word') || doc.type.includes('document')) {
+          content = 'Word document preview not available. Download to view the full document.';
+        } else if (doc.type.startsWith('text/') || doc.name.endsWith('.txt') || doc.name.endsWith('.md')) {
+          content = doc.content;
+        } else {
+          content = 'Preview not available for this file type.';
+        }
+        
+        setSelectedDocument({
+          name: doc.name,
+          type: doc.type,
+          content: content
+        });
+        setShowDocumentModal(true);
+      }
+    };
+
+    (window as any).updateContent = () => {
+      if (editorRef.current) {
+        setContent(editorRef.current.innerHTML);
+      }
+    };
+
+    return () => {
+      delete (window as any).openImagePreview;
+      delete (window as any).openDocumentPreview;
+      delete (window as any).updateContent;
+    };
+  }, []);
+
   const filteredIdeas = ideas.filter(idea =>
     idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     idea.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -767,346 +449,303 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   return (
     <div className="rich-text-editor-container">
       {/* Toolbar */}
-      <div className="editor-toolbar">
-        <div className="toolbar-group">
-          <button
-            onClick={() => execCommand('bold')}
-            className="toolbar-button"
-            title="Bold"
-          >
-            <Bold className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('italic')}
-            className="toolbar-button"
-            title="Italic"
-          >
-            <Italic className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('underline')}
-            className="toolbar-button"
-            title="Underline"
-          >
-            <Underline className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('strikeThrough')}
-            className="toolbar-button"
-            title="Strikethrough"
-          >
-            <Strikethrough className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="bg-white border-b border-gray-200 p-3 flex items-center gap-2 flex-wrap shadow-sm">
+        <button
+          onClick={() => execCommand('bold')}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors font-semibold"
+          title="Bold (Ctrl+B)"
+        >
+          <Bold className="w-4 h-4" />
+        </button>
+        
+        <button
+          onClick={() => execCommand('italic')}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          title="Italic (Ctrl+I)"
+        >
+          <Italic className="w-4 h-4" />
+        </button>
 
-        <div className="toolbar-group">
-          <select
-            onChange={(e) => execCommand('fontSize', e.target.value)}
-            className="toolbar-select"
-            defaultValue="3"
-          >
-            <option value="1">8pt</option>
-            <option value="2">10pt</option>
-            <option value="3">12pt</option>
-            <option value="4">14pt</option>
-            <option value="5">18pt</option>
-            <option value="6">24pt</option>
-            <option value="7">36pt</option>
-          </select>
-          <select
-            onChange={(e) => execCommand('fontName', e.target.value)}
-            className="toolbar-select"
-          >
-            <option value="Arial">Arial</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Times New Roman">Times</option>
-            <option value="Courier New">Courier</option>
-            <option value="Verdana">Verdana</option>
-          </select>
-        </div>
+        <div className="w-px h-6 bg-gray-300 mx-2"></div>
 
-        <div className="toolbar-group">
-          <button
-            onClick={() => execCommand('justifyLeft')}
-            className="toolbar-button"
-            title="Align Left"
-          >
-            <AlignLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('justifyCenter')}
-            className="toolbar-button"
-            title="Align Center"
-          >
-            <AlignCenter className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('justifyRight')}
-            className="toolbar-button"
-            title="Align Right"
-          >
-            <AlignRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('justifyFull')}
-            className="toolbar-button"
-            title="Justify"
-          >
-            <AlignJustify className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => imageInputRef.current?.click()}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
+          disabled={!selectedIdea || isUploading}
+          title="Insert Image"
+        >
+          <Upload className="w-4 h-4" />
+          <span className="text-sm">Image</span>
+        </button>
 
-        <div className="toolbar-group">
-          <button
-            onClick={() => execCommand('insertUnorderedList')}
-            className="toolbar-button"
-            title="Bullet List"
-          >
-            <List className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => execCommand('insertOrderedList')}
-            className="toolbar-button"
-            title="Numbered List"
-          >
-            <ListOrdered className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => documentInputRef.current?.click()}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
+          disabled={!selectedIdea || isUploading}
+          title="Insert Document"
+        >
+          <FileText className="w-4 h-4" />
+          <span className="text-sm">Document</span>
+        </button>
 
-        <div className="toolbar-group">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="toolbar-button"
-            title="Upload Image/Document"
-          >
-            <Upload className="w-4 h-4" />
-          </button>
-          <div className="relative">
-            <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="toolbar-button"
-              title="Insert Emoji"
-            >
-              <Smile className="w-4 h-4" />
-            </button>
-            {showEmojiPicker && (
-              <div className="emoji-picker">
-                <div className="emoji-grid">
-                  {commonEmojis.map((emoji, index) => (
-                    <button
-                      key={index}
-                      onClick={() => insertEmoji(emoji)}
-                      className="emoji-item"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <VoiceRecorder 
-            onTranscription={handleVoiceTranscription}
-            disabled={!selectedIdea}
-          />
-        </div>
+        <div className="w-px h-6 bg-gray-300 mx-2"></div>
 
-        <div className="toolbar-group">
+        <div className="relative">
           <button
-            onClick={() => execCommand('undo')}
-            className="toolbar-button"
-            title="Undo"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            title="Insert Emoji"
           >
-            <Undo className="w-4 h-4" />
+            <Smile className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => execCommand('redo')}
-            className="toolbar-button"
-            title="Redo"
-          >
-            <Redo className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="toolbar-group">
-          <button
-            onClick={handleSave}
-            className="toolbar-button"
-            disabled={!selectedIdea}
-            title="Save Content"
-          >
-            <Save className="w-4 h-4" />
-          </button>
-          <button
-            onClick={exportToPDF}
-            className="toolbar-button"
-            disabled={!selectedIdea || !content}
-            title="Export to PDF"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <button
-            onClick={clearContent}
-            className="toolbar-button"
-            title="Clear Content"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="toolbar-group">
-          <div className="relative">
-            <button
-              onClick={() => setShowIdeaSelector(!showIdeaSelector)}
-              className="toolbar-button flex items-center gap-2"
-              title="Switch Idea"
-            >
-              <Lightbulb className="w-4 h-4" />
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {showIdeaSelector && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-[9999] max-h-96 overflow-hidden">
-                <div className="p-3 border-b border-slate-600">
-                  <input
-                    type="text"
-                    placeholder="Search ideas..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-gray-400 text-sm"
-                  />
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {filteredIdeas.length > 0 ? (
-                    filteredIdeas.map((idea) => (
-                      <button
-                        key={idea.id}
-                        onClick={() => {
-                          onSelectIdea(idea);
-                          setShowIdeaSelector(false);
-                          setSearchTerm('');
-                        }}
-                        className={`w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0 ${
-                          selectedIdea?.id === idea.id ? 'bg-slate-700' : ''
-                        }`}
-                      >
-                        <div className="font-medium text-white text-sm truncate">
-                          {idea.title}
-                          {idea.isPinned && <span className="ml-2 text-yellow-400">📌</span>}
-                        </div>
-                        <div className="text-xs text-gray-400 truncate mt-1">
-                          {idea.description}
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          {idea.category && (
-                            <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
-                              {idea.category}
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500">
-                            {new Date(idea.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-400 text-sm">
-                      {searchTerm ? 'No ideas found matching your search' : 'No ideas available'}
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 border-t border-slate-600 bg-slate-700">
+          {showEmojiPicker && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50">
+              <div className="grid grid-cols-8 gap-1 w-64">
+                {commonEmojis.map((emoji, index) => (
                   <button
-                    onClick={() => {
-                      setShowIdeaSelector(false);
-                      window.dispatchEvent(new CustomEvent('switchToIdeas'));
-                    }}
-                    className="w-full text-center text-purple-400 hover:text-purple-300 text-sm font-medium"
+                    key={index}
+                    onClick={() => insertEmoji(emoji)}
+                    className="p-2 hover:bg-gray-100 rounded text-lg"
                   >
-                    + Create New Idea
+                    {emoji}
                   </button>
-                </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+
+        <VoiceRecorder 
+          onTranscription={handleVoiceTranscription}
+          disabled={!selectedIdea}
+        />
+
+        <div className="flex-1"></div>
+
+        <div className="relative">
+          <button
+            onClick={() => setShowIdeaSelector(!showIdeaSelector)}
+            className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
+            title="Switch Idea"
+          >
+            <Lightbulb className="w-4 h-4" />
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          {showIdeaSelector && (
+            <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] max-h-96 overflow-hidden">
+              <div className="p-3 border-b border-gray-200">
+                <input
+                  type="text"
+                  placeholder="Search ideas..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                />
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {filteredIdeas.length > 0 ? (
+                  filteredIdeas.map((idea) => (
+                    <button
+                      key={idea.id}
+                      onClick={() => {
+                        onSelectIdea(idea);
+                        setShowIdeaSelector(false);
+                        setSearchTerm('');
+                      }}
+                      className={`w-full text-left p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                        selectedIdea?.id === idea.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900 text-sm truncate">
+                        {idea.title}
+                        {idea.isPinned && <span className="ml-2 text-yellow-500">📌</span>}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate mt-1">
+                        {idea.description}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {idea.category && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {idea.category}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {new Date(idea.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-500 text-sm">
+                    {searchTerm ? 'No ideas found matching your search' : 'No ideas available'}
+                  </div>
+                )}
+              </div>
+              <div className="p-3 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => {
+                    setShowIdeaSelector(false);
+                    window.dispatchEvent(new CustomEvent('switchToIdeas'));
+                  }}
+                  className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  + Create New Idea
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+        <button
+          onClick={handleSave}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          disabled={!selectedIdea}
+          title="Save (Ctrl+S)"
+        >
+          <Save className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={exportToPDF}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          disabled={!selectedIdea || !content}
+          title="Export to PDF"
+        >
+          <Download className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={clearContent}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          title="Clear Content"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Editor */}
-      <div
-        ref={editorRef}
-        className="rich-editor"
-        contentEditable
-        onInput={(e) => setContent((e.target as HTMLDivElement).innerHTML)}
-        dangerouslySetInnerHTML={{ __html: content }}
-        style={{ minHeight: '500px' }}
-        placeholder={selectedIdea ? `Start developing your idea: ${selectedIdea.title}` : "Select an idea to start writing..."}
+      <div className="relative">
+        <div
+          ref={editorRef}
+          className={`min-h-[600px] p-6 bg-white focus:outline-none text-gray-900 leading-relaxed ${
+            dragOver ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
+          }`}
+          contentEditable={!!selectedIdea}
+          onInput={(e) => setContent((e.target as HTMLDivElement).innerHTML)}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '16px',
+            lineHeight: '1.6'
+          }}
+          placeholder={selectedIdea ? `Start writing about: ${selectedIdea.title}` : "Select an idea to start writing..."}
+        />
+
+        {isUploading && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+            <div className="text-gray-600">Uploading...</div>
+          </div>
+        )}
+
+        {!selectedIdea && (
+          <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <Lightbulb className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-xl font-semibold mb-2">No Idea Selected</h3>
+              <p className="mb-4">Choose an idea from the toolbar or create a new one to start writing.</p>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('switchToIdeas'))}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+              >
+                Go to Ideas Page
+              </button>
+            </div>
+          </div>
+        )}
+
+        {dragOver && (
+          <div className="absolute inset-0 bg-blue-50 bg-opacity-90 flex items-center justify-center border-2 border-dashed border-blue-300">
+            <div className="text-center text-blue-600">
+              <Upload className="w-12 h-12 mx-auto mb-2" />
+              <p className="text-lg font-medium">Drop files here to upload</p>
+              <p className="text-sm">Images and documents supported</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* File Inputs */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+        multiple
+        onChange={handleImageInputChange}
+        className="hidden"
       />
 
-      {!selectedIdea && (
-        <div className="text-center py-16 text-gray-400">
-          <Lightbulb className="w-16 h-16 mx-auto mb-4 opacity-50" />
-          <h3 className="text-xl font-semibold mb-2">No Idea Selected</h3>
-          <p className="mb-4">Choose an idea from the dropdown above or create a new one to start writing.</p>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('switchToIdeas'))}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
-          >
-            Go to Ideas Page
-          </button>
-        </div>
-      )}
-
-      {/* File Input */}
       <input
-        ref={fileInputRef}
+        ref={documentInputRef}
         type="file"
+        accept=".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
         multiple
-        accept="image/*,application/pdf,.doc,.docx,.txt,.md,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        onChange={handleFileUpload}
-        style={{ display: 'none' }}
+        onChange={handleDocumentInputChange}
+        className="hidden"
       />
 
       {/* Image Modal */}
       {showImageModal && selectedImage && (
-        <div className="image-modal" onClick={() => setShowImageModal(false)}>
-          <button 
-            className="image-modal-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowImageModal(false);
-            }}
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <img 
-            src={selectedImage} 
-            alt="Preview" 
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[10000]"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <button 
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowImageModal(false);
+              }}
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img 
+              src={selectedImage} 
+              alt="Preview" 
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         </div>
       )}
 
       {/* Document Modal */}
       {showDocumentModal && selectedDocument && (
-        <div className="image-modal" onClick={() => setShowDocumentModal(false)}>
-          <div className="document-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="document-modal-header">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[10000] p-4"
+          onClick={() => setShowDocumentModal(false)}
+        >
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
               <div>
-                <h3>{selectedDocument.name}</h3>
-                <span className="document-modal-type">{selectedDocument.type}</span>
+                <h3 className="text-lg font-semibold text-gray-900">{selectedDocument.name}</h3>
+                <p className="text-sm text-gray-500">{selectedDocument.type}</p>
               </div>
               <button 
-                className="image-modal-close"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDocumentModal(false);
-                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={() => setShowDocumentModal(false)}
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="document-modal-body">
-              <pre>{selectedDocument.content}</pre>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed">
+                {selectedDocument.content}
+              </pre>
             </div>
           </div>
         </div>
