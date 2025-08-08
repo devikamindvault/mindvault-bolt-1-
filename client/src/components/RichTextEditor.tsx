@@ -240,36 +240,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       if (editorRef.current) {
         editorRef.current.focus();
         
-        setTimeout(() => {
-          const selection = window.getSelection();
-          let range: Range;
-          
-          if (selection && selection.rangeCount > 0) {
-            range = selection.getRangeAt(0);
-          } else {
-            range = document.createRange();
-            range.selectNodeContents(editorRef.current!);
-            range.collapse(false);
-          }
-          
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mediaHtml;
-          const mediaElement = tempDiv.firstChild;
-          
-          if (mediaElement) {
-            range.deleteContents();
-            range.insertNode(mediaElement);
-            range.setStartAfter(mediaElement);
-            range.setEndAfter(mediaElement);
-            
-            if (selection) {
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-          }
-          
-          setContent(editorRef.current!.innerHTML);
-        }, 100);
+        // Insert media at the end of the content
+        const currentContent = editorRef.current.innerHTML;
+        const newContent = currentContent + mediaHtml;
+        editorRef.current.innerHTML = newContent;
+        setContent(newContent);
+        
+        // Scroll to the newly inserted media
+        editorRef.current.scrollTop = editorRef.current.scrollHeight;
       }
     } catch (error) {
       console.error('Error inserting media at cursor:', error);
@@ -392,11 +370,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           if (file.type.startsWith('image/')) {
             const imageUrl = isStoredInDB ? await getFileFromIndexedDB(fileId) : fileId;
             const imageHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="image-preview">
-                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal('${imageUrl}')" style="max-width: 300px; max-height: 200px; object-fit: contain; cursor: pointer;" />
-                  <div class="media-caption">${file.name}${!isStoredInDB ? ' (temporary)' : ''}</div>
-                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+              <div class="media-container" contenteditable="false" style="display: block; margin: 15px 0; padding: 0; clear: both; position: relative;">
+                <div class="image-preview" style="background: #374151; border: 2px solid #4b5563; border-radius: 12px; padding: 12px; position: relative; max-width: 320px; margin: 0 auto;">
+                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 300px; max-height: 200px; object-fit: contain; cursor: pointer; border-radius: 8px; display: block;" />
+                  <div class="media-caption" style="margin-top: 8px; font-size: 12px; color: #9ca3af; text-align: center;">${file.name}${!isStoredInDB ? ' (temporary)' : ''}</div>
+                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">×</button>
                 </div>
               </div>
             `;
@@ -404,18 +382,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           } else {
             const docIcon = getDocumentIcon(file.type);
             const documentHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="document-preview" onclick="window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')">
-                  <div class="doc-icon">${docIcon}</div>
-                  <div class="doc-info">
-                    <div class="doc-name">${file.name}${!isStoredInDB ? ' (temporary)' : ''}</div>
-                    <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)}</div>
-                    <div class="doc-actions">
-                      <button onclick="event.stopPropagation(); window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')">View</button>
-                      <button onclick="event.stopPropagation(); window.downloadFile('${fileId}', '${file.name}')">Download</button>
+              <div class="media-container" contenteditable="false" style="display: block; margin: 15px 0; padding: 0; clear: both; position: relative;">
+                <div class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: flex; align-items: center; padding: 15px; background: #374151; border: 2px solid #4b5563; border-radius: 12px; cursor: pointer; max-width: 400px; margin: 0 auto; position: relative;">
+                  <div class="doc-icon" style="font-size: 24px; margin-right: 12px; flex-shrink: 0;">${docIcon}</div>
+                  <div class="doc-info" style="flex: 1;">
+                    <div class="doc-name" style="font-weight: 600; color: #e5e7eb; font-size: 14px; margin-bottom: 2px;">${file.name}${!isStoredInDB ? ' (temporary)' : ''}</div>
+                    <div class="doc-type" style="font-size: 12px; color: #9ca3af;">${file.type || 'Unknown'} • ${formatFileSize(file.size)}</div>
+                    <div class="doc-actions" style="display: flex; gap: 8px; margin-top: 8px;">
+                      <button onclick="event.stopPropagation(); window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid #4b5563; background: #374151; color: #e5e7eb; cursor: pointer;">View</button>
+                      <button onclick="event.stopPropagation(); window.downloadFile && window.downloadFile('${fileId}', '${file.name}')" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid #4b5563; background: #374151; color: #e5e7eb; cursor: pointer;">Download</button>
                     </div>
                   </div>
-                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()">×</button>
+                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center;">×</button>
                 </div>
               </div>
             `;
