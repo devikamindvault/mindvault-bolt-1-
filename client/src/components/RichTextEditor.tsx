@@ -1061,10 +1061,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
         {!selectedIdea && (
           <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-gray-500" style={{ color: '#6b7280' }}>
               <Lightbulb className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">No Idea Selected</h3>
-              <p className="mb-4">Choose an idea from the toolbar or create a new one to start writing.</p>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: '#374151' }}>No Idea Selected</h3>
+              <p className="mb-4" style={{ color: '#6b7280' }}>Choose an idea from the toolbar or create a new one to start writing.</p>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('switchToIdeas'))}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
