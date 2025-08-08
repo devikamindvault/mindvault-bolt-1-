@@ -928,28 +928,29 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       className={`w-full text-left p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
                         selectedIdea?.id === idea.id ? 'bg-blue-50' : ''
                       }`}
+                     style={{ color: '#1f2937' }}
                     >
-                      <div className="font-medium text-sm truncate" style={{ color: '#1f2937 !important' }}>
+                      <div className="font-medium text-sm truncate" style={{ color: '#1f2937 !important', fontWeight: '600' }}>
                         {idea.title}
                         {idea.isPinned && <span className="ml-2 text-yellow-500">📌</span>}
                       </div>
-                      <div className="text-xs truncate mt-1" style={{ color: '#6b7280 !important' }}>
+                      <div className="text-xs truncate mt-1" style={{ color: '#4b5563 !important', fontWeight: '500' }}>
                         {idea.description}
                       </div>
                       <div className="flex items-center gap-2 mt-2">
                         {idea.category && (
-                          <span className="text-xs bg-blue-100 px-2 py-1 rounded" style={{ color: '#1e40af !important' }}>
+                          <span className="text-xs bg-blue-100 px-2 py-1 rounded" style={{ color: '#1e40af !important', fontWeight: '600' }}>
                             {idea.category}
                           </span>
                         )}
-                        <span className="text-xs" style={{ color: '#9ca3af !important' }}>
+                        <span className="text-xs" style={{ color: '#6b7280 !important', fontWeight: '500' }}>
                           {new Date(idea.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="p-4 text-center text-sm" style={{ color: '#6b7280 !important' }}>
+                  <div className="p-4 text-center text-sm" style={{ color: '#374151 !important', fontWeight: '600' }}>
                     {searchTerm ? 'No ideas found matching your search' : 'No ideas available'}
                   </div>
                 )}
@@ -960,8 +961,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setShowIdeaSelector(false);
                     window.dispatchEvent(new CustomEvent('switchToIdeas'));
                   }}
-                  className="w-full text-center hover:text-blue-700 text-sm font-medium"
-                  style={{ color: '#2563eb !important' }}
+                  className="w-full text-center hover:bg-blue-50 text-sm font-medium py-2 px-3 rounded transition-colors"
+                  style={{ color: '#1d4ed8 !important', fontWeight: '700' }}
                 >
                   + Create New Idea
                 </button>
@@ -1061,13 +1062,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
         {!selectedIdea && (
           <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
-            <div className="text-center text-gray-500" style={{ color: '#6b7280' }}>
+            <div className="text-center">
               <Lightbulb className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2" style={{ color: '#374151' }}>No Idea Selected</h3>
-              <p className="mb-4" style={{ color: '#6b7280' }}>Choose an idea from the toolbar or create a new one to start writing.</p>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: '#1f2937 !important', fontWeight: '700' }}>No Idea Selected</h3>
+              <p className="mb-4" style={{ color: '#374151 !important', fontWeight: '500' }}>Choose an idea from the toolbar or create a new one to start writing.</p>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('switchToIdeas'))}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors"
+                style={{ color: '#ffffff !important', fontWeight: '600' }}
               >
                 Go to Ideas Page
               </button>
