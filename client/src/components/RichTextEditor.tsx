@@ -47,9 +47,52 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   // Auto-save functionality
   const autoSave = useCallback(() => {
     if (selectedIdea && content) {
-      const key = `mindvault-content-${selectedIdea.id}`;
-      localStorage.setItem(key, content);
-      console.log('Auto-saved content');
+      try {
+        const key = `mindvault-content-${selectedIdea.id}`;
+        
+        // Check if content is too large (localStorage limit is ~5-10MB)
+        const contentSize = new Blob([content]).size;
+        const maxSize = 4 * 1024 * 1024; // 4MB limit to be safe
+        
+        if (contentSize > maxSize) {
+          console.warn('Content too large for localStorage, compressing...');
+          // Remove base64 images from auto-save to reduce size
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = content;
+          const images = tempDiv.querySelectorAll('img');
+          images.forEach(img => {
+            if (img.src.startsWith('data:')) {
+              img.src = 'data:image/placeholder'; // Replace with placeholder
+            }
+          });
+          localStorage.setItem(key, tempDiv.innerHTML);
+          console.log('Auto-saved compressed content');
+        } else {
+          localStorage.setItem(key, content);
+          console.log('Auto-saved content');
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+          console.warn('localStorage quota exceeded, clearing old data...');
+          // Clear old content to make space
+          const keys = Object.keys(localStorage);
+          const contentKeys = keys.filter(key => key.startsWith('mindvault-content-'));
+          // Keep only the current idea and 2 most recent ones
+          contentKeys.sort().slice(0, -3).forEach(key => {
+            localStorage.removeItem(key);
+          });
+          
+          try {
+            localStorage.setItem(`mindvault-content-${selectedIdea.id}`, content);
+            console.log('Auto-saved after cleanup');
+          } catch (retryError) {
+            console.error('Failed to save even after cleanup:', retryError);
+            alert('Storage full. Please export your work and refresh the page.');
+          }
+        } else {
+          console.error('Error auto-saving:', error);
+        }
+      }
     }
   }, [selectedIdea, content]);
 
@@ -337,9 +380,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       return;
     }
 
-    const key = `mindvault-content-${selectedIdea.id}`;
-    localStorage.setItem(key, content);
-    alert('Content saved successfully!');
+    try {
+      const key = `mindvault-content-${selectedIdea.id}`;
+      localStorage.setItem(key, content);
+      alert('Content saved successfully!');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        alert('Storage full! Please export your work or delete old content.');
+      } else {
+        alert('Error saving content. Please try again.');
+      }
+    }
   };
 
   const exportToPDF = async () => {
@@ -703,6 +754,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[10000]"
           onClick={() => setShowImageModal(false)}
         >
+          <button 
+            className="absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full flex items-center justify-center transition-all duration-200 z-[10001]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImageModal(false);
+            }}
+            title="Close preview"
+          >
+            <X className="w-6 h-6" />
+          </button>
           <div className="relative max-w-[90vw] max-h-[90vh]">
             <button 
               className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
