@@ -393,13 +393,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }
   };
 
-  const exportToPDF = async () => {
+  const exportToSimplePDF = async () => {
     if (!selectedIdea || !content) {
       alert('Please select an idea and add some content first');
       return;
     }
 
     try {
+      const { jsPDF } = await import('jspdf');
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
       const margin = 20;
@@ -425,6 +426,311 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       alert('Error exporting to PDF. Please try again.');
+    }
+  };
+
+  // Parse editor content for PDF generation
+  const parseEditorContent = (htmlContent: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    
+    const elements = [];
+    const images = [];
+    const documents = [];
+    
+    // Walk through all nodes
+    const walkNodes = (node: Node, x = 50, y = 50) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.trim();
+        if (text) {
+          const parent = node.parentElement;
+          elements.push({
+            type: 'text',
+            text,
+            x,
+            y,
+            bold: parent?.tagName === 'STRONG' || parent?.tagName === 'B',
+            italic: parent?.tagName === 'EM' || parent?.tagName === 'I',
+            fontSize: 12
+          });
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        
+        if (element.tagName === 'IMG') {
+          const img = element as HTMLImageElement;
+          images.push({
+            src: img.src,
+            x,
+            y,
+            width: Math.min(img.width || 200, 200),
+            height: Math.min(img.height || 150, 150),
+            alt: img.alt || 'Image'
+          });
+        } else if (element.classList.contains('document-wrapper')) {
+          const docSpan = element.querySelector('span[onclick]');
+          if (docSpan) {
+            const onclick = docSpan.getAttribute('onclick') || '';
+            const docIdMatch = onclick.match(/openDocumentPreview\('([^']+)'\)/);
+            if (docIdMatch) {
+              const docId = docIdMatch[1];
+              const docData = localStorage.getItem(`doc-${docId}`);
+              if (docData) {
+                const doc = JSON.parse(docData);
+                documents.push({
+                  id: docId,
+                  name: doc.name,
+                  type: doc.type,
+                  content: doc.content,
+                  x,
+                  y,
+                  width: 100,
+                  height: 30
+                });
+              }
+            }
+          }
+        }
+        
+        // Recursively process child nodes
+        for (let i = 0; i < node.childNodes.length; i++) {
+          walkNodes(node.childNodes[i], x, y + (i * 20));
+        }
+      }
+    };
+    
+    walkNodes(doc.body);
+    
+    return { elements, images, documents };
+  };
+
+  // Convert image to buffer
+  const imageToBuffer = async (src: string): Promise<Uint8Array> => {
+    if (src.startsWith('data:')) {
+      // Base64 image
+      const base64Data = src.split(',')[1];
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    } else {
+      // URL image - convert to canvas then to buffer
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+              };
+              reader.readAsArrayBuffer(blob);
+            } else {
+              reject(new Error('Failed to convert image to blob'));
+            }
+          }, 'image/png');
+        };
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+  };
+
+  // Generate interactive PDF
+  const generateInteractivePDF = async () => {
+    if (!selectedIdea || !content) {
+      alert('Please select an idea and add some content first');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    setPdfProgress(10);
+
+    try {
+      // Parse editor content
+      const parsedContent = parseEditorContent(content);
+      setPdfProgress(20);
+
+      // Create PDF document
+      const pdfDoc = await PDFLib.create();
+      const page = pdfDoc.addPage([612, 792]); // Letter size
+      const { width, height } = page.getSize();
+      
+      setPdfProgress(30);
+
+      // Add title
+      const titleFont = await pdfDoc.embedFont('Helvetica-Bold');
+      page.drawText(selectedIdea.title, {
+        x: 50,
+        y: height - 50,
+        size: 20,
+        font: titleFont,
+        color: rgb(0, 0, 0)
+      });
+
+      let currentY = height - 100;
+      setPdfProgress(40);
+
+      // Add text elements
+      const regularFont = await pdfDoc.embedFont('Helvetica');
+      const boldFont = await pdfDoc.embedFont('Helvetica-Bold');
+      
+      for (const element of parsedContent.elements) {
+        if (currentY < 50) {
+          // Add new page if needed
+          const newPage = pdfDoc.addPage([612, 792]);
+          currentY = height - 50;
+        }
+        
+        page.drawText(element.text, {
+          x: element.x,
+          y: currentY,
+          size: element.fontSize,
+          font: element.bold ? boldFont : regularFont,
+          color: rgb(0, 0, 0)
+        });
+        
+        currentY -= 20;
+      }
+      
+      setPdfProgress(60);
+
+      // Add images with clickable areas
+      for (const img of parsedContent.images) {
+        try {
+          const imageBuffer = await imageToBuffer(img.src);
+          let embeddedImage;
+          
+          // Determine image type and embed
+          if (img.src.includes('data:image/png') || img.src.includes('.png')) {
+            embeddedImage = await pdfDoc.embedPng(imageBuffer);
+          } else {
+            embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+          }
+          
+          // Calculate position
+          const imageY = Math.max(currentY - img.height, 50);
+          
+          // Draw image
+          page.drawImage(embeddedImage, {
+            x: img.x,
+            y: imageY,
+            width: img.width,
+            height: img.height
+          });
+          
+          // Add clickable annotation (link to full-size view)
+          const annotation = pdfDoc.context.obj({
+            Type: 'Annot',
+            Subtype: 'Link',
+            Rect: [img.x, imageY, img.x + img.width, imageY + img.height],
+            Border: [0, 0, 2],
+            C: [0, 0, 1], // Blue border
+            A: {
+              Type: 'Action',
+              S: 'JavaScript',
+              JS: `this.zoom = 200; this.gotoNamedDest("image_${img.alt}");`
+            }
+          });
+          
+          page.node.set('Annots', pdfDoc.context.obj([annotation]));
+          currentY = imageY - 20;
+          
+        } catch (imgError) {
+          console.warn('Failed to embed image:', imgError);
+        }
+      }
+      
+      setPdfProgress(80);
+
+      // Add document attachments
+      for (const doc of parsedContent.documents) {
+        try {
+          // Add document icon (using text for now)
+          const docY = Math.max(currentY - 20, 50);
+          
+          page.drawText(`📄 ${doc.name}`, {
+            x: doc.x,
+            y: docY,
+            size: 12,
+            font: regularFont,
+            color: rgb(0, 0, 0.8)
+          });
+          
+          // Create attachment
+          if (doc.content && doc.type.startsWith('text/')) {
+            const textBuffer = new TextEncoder().encode(doc.content);
+            await pdfDoc.attach(textBuffer, doc.name, {
+              mimeType: doc.type,
+              description: `Attached document: ${doc.name}`
+            });
+            
+            // Add clickable annotation
+            const docAnnotation = pdfDoc.context.obj({
+              Type: 'Annot',
+              Subtype: 'FileAttachment',
+              Rect: [doc.x, docY, doc.x + 200, docY + 15],
+              Contents: `Click to open ${doc.name}`,
+              Name: 'Paperclip',
+              F: 4, // Print flag
+              FS: {
+                Type: 'Filespec',
+                F: doc.name,
+                UF: doc.name
+              }
+            });
+            
+            page.node.set('Annots', pdfDoc.context.obj([docAnnotation]));
+          }
+          
+          currentY = docY - 25;
+          
+        } catch (docError) {
+          console.warn('Failed to attach document:', docError);
+        }
+      }
+      
+      setPdfProgress(90);
+
+      // Set PDF metadata
+      pdfDoc.setTitle(selectedIdea.title);
+      pdfDoc.setAuthor('Mind Vault');
+      pdfDoc.setSubject('Interactive Document Export');
+      pdfDoc.setCreator('Mind Vault Editor');
+      pdfDoc.setProducer('Mind Vault PDF Generator');
+      pdfDoc.setCreationDate(new Date());
+      pdfDoc.setModificationDate(new Date());
+
+      // Generate PDF bytes
+      const pdfBytes = await pdfDoc.save();
+      setPdfProgress(100);
+
+      // Download PDF
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const filename = `${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_interactive_${Date.now()}.pdf`;
+      saveAs(blob, filename);
+
+      alert('Interactive PDF generated successfully! Images are clickable and documents are attached.');
+      
+    } catch (error) {
+      console.error('Error generating interactive PDF:', error);
+      alert('Error generating interactive PDF. Falling back to simple PDF...');
+      // Fallback to simple PDF
+      await exportToSimplePDF();
+    } finally {
+      setIsGeneratingPDF(false);
+      setPdfProgress(0);
     }
   };
 
@@ -659,12 +965,25 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         </button>
 
         <button
-          onClick={exportToPDF}
+          onClick={generateInteractivePDF}
           className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-          disabled={!selectedIdea || !content}
-          title="Export to PDF"
+          disabled={!selectedIdea || !content || isGeneratingPDF}
+          title="Export Interactive PDF"
         >
-          <Download className="w-4 h-4" />
+          {isGeneratingPDF ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-blue-600 rounded-full animate-spin"></div>
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+        </button>
+
+        <button
+          onClick={exportToSimplePDF}
+          className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors text-xs"
+          disabled={!selectedIdea || !content || isGeneratingPDF}
+          title="Export Simple PDF"
+        >
+          PDF
         </button>
 
         <button
@@ -678,6 +997,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
 
       {/* Editor */}
       <div className="relative">
+        {/* PDF Generation Progress */}
+        {isGeneratingPDF && (
+          <div className="absolute top-0 left-0 right-0 bg-blue-600 h-1 z-50">
+            <div 
+              className="bg-blue-400 h-full transition-all duration-300"
+              style={{ width: `${pdfProgress}%` }}
+            ></div>
+          </div>
+        )}
+        
+        {isGeneratingPDF && (
+          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-40">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-700 font-medium">Generating Interactive PDF...</p>
+              <p className="text-sm text-gray-500">{pdfProgress}% complete</p>
+            </div>
+          </div>
+        )}
+
         <div
           ref={editorRef}
           className={`min-h-[600px] p-6 bg-white focus:outline-none text-gray-900 leading-relaxed ${
@@ -755,6 +1094,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           onClick={() => setShowImageModal(false)}
         >
           <button 
+            className="absolute top-6 right-6 w-12 h-12 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full flex items-center justify-center transition-all duration-200 z-[10001] backdrop-blur-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImageModal(false);
+            }}
+            title="Close preview"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <button 
             className="absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full flex items-center justify-center transition-all duration-200 z-[10001]"
             onClick={(e) => {
               e.stopPropagation();
@@ -765,15 +1114,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <X className="w-6 h-6" />
           </button>
           <div className="relative max-w-[90vw] max-h-[90vh]">
-            <button 
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowImageModal(false);
-              }}
-            >
-              <X className="w-8 h-8" />
-            </button>
             <img 
               src={selectedImage} 
               alt="Preview" 
