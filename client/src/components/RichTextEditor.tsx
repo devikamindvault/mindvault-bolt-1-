@@ -929,27 +929,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                         selectedIdea?.id === idea.id ? 'bg-blue-50' : ''
                       }`}
                     >
-                      <div className="font-medium text-gray-900 text-sm truncate" style={{ color: '#1f2937' }}>
+                      <div className="font-medium text-sm truncate" style={{ color: '#1f2937 !important' }}>
                         {idea.title}
                         {idea.isPinned && <span className="ml-2 text-yellow-500">📌</span>}
                       </div>
-                      <div className="text-xs text-gray-500 truncate mt-1" style={{ color: '#6b7280' }}>
+                      <div className="text-xs truncate mt-1" style={{ color: '#6b7280 !important' }}>
                         {idea.description}
                       </div>
                       <div className="flex items-center gap-2 mt-2">
                         {idea.category && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          <span className="text-xs bg-blue-100 px-2 py-1 rounded" style={{ color: '#1e40af !important' }}>
                             {idea.category}
                           </span>
                         )}
-                        <span className="text-xs text-gray-400" style={{ color: '#9ca3af' }}>
+                        <span className="text-xs" style={{ color: '#9ca3af !important' }}>
                           {new Date(idea.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="p-4 text-center text-gray-500 text-sm" style={{ color: '#6b7280' }}>
+                  <div className="p-4 text-center text-sm" style={{ color: '#6b7280 !important' }}>
                     {searchTerm ? 'No ideas found matching your search' : 'No ideas available'}
                   </div>
                 )}
@@ -960,8 +960,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     setShowIdeaSelector(false);
                     window.dispatchEvent(new CustomEvent('switchToIdeas'));
                   }}
-                  className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium"
-                  style={{ color: '#2563eb' }}
+                  className="w-full text-center hover:text-blue-700 text-sm font-medium"
+                  style={{ color: '#2563eb !important' }}
                 >
                   + Create New Idea
                 </button>
