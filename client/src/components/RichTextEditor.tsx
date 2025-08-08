@@ -490,34 +490,26 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     }, 50);
   };
 
-  const handleFileUpload = async (files: FileList) => {
-    if (!files.length) return;
-
-    // Store current cursor position before processing files
-    const editor = editorRef.current;
-    if (editor) {
-      editor.focus();
-    }
-
-    const saveToIndexedDB = (file: File, id: string): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('IdeaMediaDB', 4);
+  const saveToIndexedDB = async (file: File, id: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('IdeaMediaDB', 4);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains('media')) {
+          const mediaStore = db.createObjectStore('media', { keyPath: 'id' });
+          mediaStore.createIndex('ideaId', 'ideaId', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('history')) {
+          const historyStore = db.createObjectStore('history', { keyPath: 'id' });
+          historyStore.createIndex('ideaId', 'ideaId', { unique: false });
+        }
+      };
+      
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
         
-        request.onupgradeneeded = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          if (!db.objectStoreNames.contains('media')) {
-            const mediaStore = db.createObjectStore('media', { keyPath: 'id' });
-            mediaStore.createIndex('ideaId', 'ideaId', { unique: false });
-          }
-          if (!db.objectStoreNames.contains('history')) {
-            const historyStore = db.createObjectStore('history', { keyPath: 'id' });
-            historyStore.createIndex('ideaId', 'ideaId', { unique: false });
-          }
-        };
-        
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          
+        if (db.objectStoreNames.contains('media')) {
           try {
             const transaction = db.transaction(['media'], 'readwrite');
             const store = transaction.objectStore('media');
@@ -563,119 +555,122 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             const blobUrl = URL.createObjectURL(file);
             resolve(blobUrl);
           }
-        };
-        
-        request.onerror = (error) => {
-          console.error('Failed to open IndexedDB:', error);
-          // Fallback to blob URL if IndexedDB is not available
+        } else {
+          console.error('Media object store not found');
           const blobUrl = URL.createObjectURL(file);
           resolve(blobUrl);
-        };
-      });
-    };
+        }
+      };
+      
+      request.onerror = (error) => {
+        console.error('IndexedDB not supported:', error);
+        // Fallback to blob URL if IndexedDB is not supported
+        const blobUrl = URL.createObjectURL(file);
+        resolve(blobUrl);
+      };
+    });
+  };
 
-    const getFileIcon = (type: string): string => {
-      if (type.includes('pdf')) return '📄';
-      if (type.includes('word') || type.includes('doc')) return '📝';
-      if (type.includes('text')) return '📄';
-      if (type.includes('rtf')) return '📄';
-      return '📄';
-    };
+  const getFileIcon = (type: string): string => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('word') || type.includes('doc')) return '📝';
+    if (type.includes('text')) return '📄';
+    if (type.includes('rtf')) return '📄';
+    return '📄';
+  };
 
-    const formatFileSize = (bytes: number): string => {
-      if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
-    // Process files sequentially to maintain order
+  const handleFileUpload = async (files: FileList) => {
+    if (!files.length) return;
+
+    // Store current cursor position before processing files
+    const editor = editorRef.current;
+    if (editor) {
+      editor.focus();
+    }
+    
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Check file size limits
-      const maxSize = file.type.startsWith('image/') ? 5 * 1024 * 1024 : 10 * 1024 * 1024; // 5MB for images, 10MB for documents
-      if (file.size > maxSize) {
-        const sizeLimit = file.type.startsWith('image/') ? '5MB' : '10MB';
-        alert(`File "${file.name}" is too large. Please use files smaller than ${sizeLimit}.`);
-        continue;
-      }
+      console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
       
       try {
-        console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
+        const mediaUrl = await saveToIndexedDB(file, fileId);
+        console.log(`File saved with URL: ${mediaUrl}`);
         
-        try {
-          const mediaUrl = await saveToIndexedDB(file, fileId);
-          console.log(`File saved with URL: ${mediaUrl}`);
-          
-          if (file.type.startsWith('image/')) {
-            const imageHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="image-preview">
-                  <img src="${mediaUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${mediaUrl}', '${file.name}')" />
-                  <div class="media-caption">${file.name}</div>
-                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
-                </div>
+        if (file.type.startsWith('image/')) {
+          const imageHtml = `
+            <div class="media-container" contenteditable="false">
+              <div class="image-preview">
+                <img src="${mediaUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${mediaUrl}', '${file.name}')" />
+                <div class="media-caption">${file.name}</div>
+                <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
               </div>
-            `;
-            insertMediaAtCursor(imageHtml);
-          } else {
-            const documentHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="document-preview">
-                  <div class="doc-icon">${getFileIcon(file.type)}</div>
-                  <div class="doc-info">
-                    <div class="doc-name">${file.name}</div>
-                    <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)}</div>
-                    <div class="doc-actions">
-                      <button onclick="viewDocument('${mediaUrl}', '${file.name}', '${file.type}')">View</button>
-                      <button onclick="downloadDocument('${mediaUrl}', '${file.name}')">Download</button>
-                    </div>
+            </div>
+          `;
+          insertMediaAtCursor(imageHtml);
+        } else {
+          const documentHtml = `
+            <div class="media-container" contenteditable="false">
+              <div class="document-preview">
+                <div class="doc-icon">${getFileIcon(file.type)}</div>
+                <div class="doc-info">
+                  <div class="doc-name">${file.name}</div>
+                  <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)}</div>
+                  <div class="doc-actions">
+                    <button onclick="viewDocument('${mediaUrl}', '${file.name}', '${file.type}')">View</button>
+                    <button onclick="downloadDocument('${mediaUrl}', '${file.name}')">Download</button>
                   </div>
-                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
                 </div>
+                <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
               </div>
-            `;
-            insertMediaAtCursor(documentHtml);
-          }
-        } catch (storageError) {
-          console.error(`Storage error for file ${file.name}:`, storageError);
-          
-          // Create blob URL as fallback
-          const blobUrl = URL.createObjectURL(file);
-          
-          if (file.type.startsWith('image/')) {
-            const imageHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="image-preview">
-                  <img src="${blobUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${blobUrl}', '${file.name}')" />
-                  <div class="media-caption">${file.name} (Temporary)</div>
-                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
-                </div>
+            </div>
+          `;
+          insertMediaAtCursor(documentHtml);
+        }
+      } catch (storageError) {
+        console.error(`Storage error for file ${file.name}:`, storageError);
+        
+        // Create blob URL as fallback
+        const blobUrl = URL.createObjectURL(file);
+        
+        if (file.type.startsWith('image/')) {
+          const imageHtml = `
+            <div class="media-container" contenteditable="false">
+              <div class="image-preview">
+                <img src="${blobUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${blobUrl}', '${file.name}')" />
+                <div class="media-caption">${file.name} (Temporary)</div>
+                <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
               </div>
-            `;
-            insertMediaAtCursor(imageHtml);
-          } else {
-            const documentHtml = `
-              <div class="media-container" contenteditable="false">
-                <div class="document-preview">
-                  <div class="doc-icon">${getFileIcon(file.type)}</div>
-                  <div class="doc-info">
-                    <div class="doc-name">${file.name}</div>
-                    <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)} (Temporary)</div>
-                    <div class="doc-actions">
-                      <button onclick="viewDocument('${blobUrl}', '${file.name}', '${file.type}')">View</button>
-                      <button onclick="downloadDocument('${blobUrl}', '${file.name}')">Download</button>
-                    </div>
+            </div>
+          `;
+          insertMediaAtCursor(imageHtml);
+        } else {
+          const documentHtml = `
+            <div class="media-container" contenteditable="false">
+              <div class="document-preview">
+                <div class="doc-icon">${getFileIcon(file.type)}</div>
+                <div class="doc-info">
+                  <div class="doc-name">${file.name}</div>
+                  <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)} (Temporary)</div>
+                  <div class="doc-actions">
+                    <button onclick="viewDocument('${blobUrl}', '${file.name}', '${file.type}')">View</button>
+                    <button onclick="downloadDocument('${blobUrl}', '${file.name}')">Download</button>
                   </div>
-                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
                 </div>
+                <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
               </div>
-            `;
-            insertMediaAtCursor(documentHtml);
-          }
+            </div>
+          `;
+          insertMediaAtCursor(documentHtml);
         }
       } catch (error) {
         console.error(`Error uploading file ${file.name}:`, error);
@@ -683,7 +678,18 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       }
     }
     
-    // Trigger content change after all files are processed
+    // Insert the media element at the cursor position
+    // range.insertNode(mediaElement);
+    
+    // Move cursor after the inserted media element
+    // range.setStartAfter(mediaElement);
+    // range.setEndAfter(mediaElement);
+    
+    // Update the selection
+    // selection.removeAllRanges();
+    // selection.addRange(range);
+    
+    // Trigger content change
     handleContentChange();
   };
 
@@ -1137,7 +1143,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           }
           
           const itemText = `${index + 1}. ${item.name} (${item.type})`;
-          pdf.text(itemText, margin + 5, yPosition);
+          pdf.text(itemText, margin, yPosition);
           yPosition += 6;
         });
       }
@@ -1147,7 +1153,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
       pdf.setFont('helvetica', 'italic');
       const timestamp = new Date().toLocaleString();
       pdf.text(`Generated on ${timestamp}`, margin, pageHeight - 10);
-
+      
       // Save the PDF
       pdf.save(`${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
     } catch (error) {
