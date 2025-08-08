@@ -521,7 +521,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           a.download = fileName;
           a.click();
           URL.revokeObjectURL(url);
-        } catch (error) {
+        }
+      } catch (error) {
         console.error('Error downloading file:', error);
         alert('Error downloading file. Please try again.');
       }
