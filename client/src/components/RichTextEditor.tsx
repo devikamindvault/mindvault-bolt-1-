@@ -521,8 +521,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           a.download = fileName;
           a.click();
           URL.revokeObjectURL(url);
-        }
-      } catch (error) {
+        } catch (error) {
         console.error('Error downloading file:', error);
         alert('Error downloading file. Please try again.');
       }
@@ -667,7 +666,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         
         // Style interactive media placeholders
         if (line.includes('[📷 INTERACTIVE IMAGE') || line.includes('[📄 INTERACTIVE DOCUMENT')) {
-          pdf.setFillColor(line.includes('📷') ? 59, 130, 246 : 34, 197, 94); // Blue for images, green for docs
+          if (line.includes('📷')) {
+            pdf.setFillColor(59, 130, 246); // Blue for images
+          } else {
+            pdf.setFillColor(34, 197, 94); // Green for docs
+          }
           pdf.rect(margin - 2, yPosition - 4, maxWidth + 4, 8, 'F');
           pdf.setTextColor(255, 255, 255);
           pdf.setFont('helvetica', 'bold');
