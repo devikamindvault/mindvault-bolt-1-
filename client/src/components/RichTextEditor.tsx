@@ -129,12 +129,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             <h2 style="margin: 0 0 10px 0; color: #007bff; font-size: 24px; font-weight: bold;">${selectedIdea.title}</h2>
             ${selectedIdea.category ? `<div style="margin-bottom: 8px;"><strong>Category:</strong> <span style="background: #e3f2fd; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #1976d2;">${selectedIdea.category}</span></div>` : ''}
             ${selectedIdea.deadline ? `<div style="margin-bottom: 8px;"><strong>Target Date:</strong> ${new Date(selectedIdea.deadline).toLocaleDateString()}</div>` : ''}
-            <div style="margin-bottom: 10px;"><strong>Description:</strong></div>
-            <div style="color: #666; line-height: 1.5; white-space: pre-wrap;">${selectedIdea.description}</div>
-          </div>
-          <div style="margin-top: 30px;">
-            <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 5px;">Development Notes:</h3>
-            <p style="color: #666; margin-top: 15px;">Start developing your idea here...</p>
+            <div style="color: #333; line-height: 1.6; white-space: pre-wrap; margin-top: 15px;">${selectedIdea.description}</div>
           </div>
         `;
       }
