@@ -112,11 +112,28 @@ p, span, div {
   border: 1px solid #374151;
   border-radius: 8px;
   background: #1f2937;
-  color: #f9fafb;
+  color: #1f2937 !important;
   padding: 16px;
   font-size: 16px;
   line-height: 1.6;
   font-family: 'Georgia', serif;
+}
+
+/* Force editor text to be dark */
+.rich-editor,
+.rich-editor *,
+[contenteditable="true"],
+[contenteditable="true"] * {
+  color: #1f2937 !important;
+}
+
+/* Override any inherited text colors in editor */
+div[contenteditable="true"] {
+  color: #1f2937 !important;
+}
+
+div[contenteditable="true"] * {
+  color: inherit !important;
 }
 
 .rich-editor:focus {

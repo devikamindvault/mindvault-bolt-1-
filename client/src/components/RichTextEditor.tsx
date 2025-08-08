@@ -1048,7 +1048,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             fontFamily: 'Georgia, serif',
             fontSize: '16px',
             lineHeight: '1.6',
-            color: '#1f2937'
+            color: '#1f2937 !important'
           }}
           placeholder={selectedIdea ? `Start writing about: ${selectedIdea.title}` : "Select an idea to start writing..."}
         />
