@@ -389,11 +389,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           if (file.type.startsWith('image/')) {
             const imageUrl = isStoredInDB ? await getFileFromIndexedDB(fileId) : fileId;
             const imageHtml = `
-              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 8px; padding: 0; position: relative; vertical-align: top;">
-                <div class="image-preview" style="background: #374151; border: 2px solid #4b5563; border-radius: 8px; padding: 8px; position: relative; max-width: 250px;">
-                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 200px; max-height: 150px; object-fit: contain; cursor: pointer; border-radius: 4px; display: block;" />
+              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 4px 8px; padding: 0; position: relative; vertical-align: middle;">
+                <div class="image-preview" style="background: #374151; border: 2px solid #4b5563; border-radius: 8px; padding: 6px; position: relative; display: inline-block;">
+                  <img src="${imageUrl}" alt="${file.name}" onclick="window.openImageModal && window.openImageModal('${imageUrl}')" style="max-width: 150px; max-height: 100px; object-fit: contain; cursor: pointer; border-radius: 4px; display: block;" />
                   <div class="media-caption" style="margin-top: 4px; font-size: 10px; color: #9ca3af; text-align: center; word-break: break-word;">${file.name}${!isStoredInDB ? ' (temp)' : ''}</div>
-                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
+                  <button class="media-delete-btn" onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
                 </div>
               </div>
             `;
@@ -401,8 +401,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           } else {
             const docIcon = getDocumentIcon(file.type);
             const documentHtml = `
-              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 8px; padding: 0; position: relative; vertical-align: top;">
-                <div class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: flex; align-items: center; padding: 10px; background: #374151; border: 2px solid #4b5563; border-radius: 8px; cursor: pointer; max-width: 250px; position: relative;">
+              <div class="media-container" contenteditable="false" style="display: inline-block; margin: 4px 8px; padding: 0; position: relative; vertical-align: middle;">
+                <div class="document-preview" onclick="window.openDocumentModal && window.openDocumentModal('${file.name}', '${file.type}', '${fileId}')" style="display: flex; align-items: center; padding: 8px; background: #374151; border: 2px solid #4b5563; border-radius: 8px; cursor: pointer; max-width: 200px; position: relative;">
                   <div class="doc-icon" style="font-size: 24px; margin-right: 12px; flex-shrink: 0;">${docIcon}</div>
                   <div class="doc-info" style="flex: 1;">
                     <div class="doc-name" style="font-weight: 600; color: #e5e7eb; font-size: 12px; margin-bottom: 2px; word-break: break-word;">${file.name}${!isStoredInDB ? ' (temp)' : ''}</div>
@@ -412,7 +412,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                       <button onclick="event.stopPropagation(); window.downloadFile && window.downloadFile('${fileId}', '${file.name}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; border: 1px solid #4b5563; background: #374151; color: #e5e7eb; cursor: pointer;">Download</button>
                     </div>
                   </div>
-                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
+                  <button class="media-delete-btn" onclick="event.stopPropagation(); this.parentElement.parentElement.remove()" style="position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10;">×</button>
                 </div>
               </div>
             `;
@@ -1077,9 +1077,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         <div className="image-modal" onClick={() => setShowImageModal(false)}>
           <button 
             className="image-modal-close"
-            onClick={() => setShowImageModal(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImageModal(false);
+            }}
           >
-            ×
+            <X className="w-6 h-6" />
           </button>
           <img 
             src={selectedImage} 
@@ -1100,9 +1103,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
               </div>
               <button 
                 className="image-modal-close"
-                onClick={() => setShowDocumentModal(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDocumentModal(false);
+                }}
               >
-                ×
+                <X className="w-6 h-6" />
               </button>
             </div>
             <div className="document-modal-body">
