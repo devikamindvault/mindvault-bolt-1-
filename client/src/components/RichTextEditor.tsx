@@ -974,7 +974,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
               <ChevronDown className="w-3 h-3" />
             </button>
             {showIdeaSelector && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden">
+              <div className="absolute top-full left-0 mt-2 w-80 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-[9999] max-h-96 overflow-hidden">
                 <div className="p-3 border-b border-slate-600">
                   <input
                     type="text"
@@ -1023,7 +1023,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
                     </div>
                   )}
                 </div>
-                <div className="p-3 border-t border-slate-600 bg-slate-750">
+                <div className="p-3 border-t border-slate-600 bg-slate-700">
                   <button
                     onClick={() => {
                       setShowIdeaSelector(false);
