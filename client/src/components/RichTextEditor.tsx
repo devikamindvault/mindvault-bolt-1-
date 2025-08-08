@@ -235,22 +235,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
   const loadMediaFromIndexedDB = async (ideaId: string): Promise<MediaItem[]> => {
     return new Promise((resolve) => {
       try {
-        const request = indexedDB.open('IdeaMediaDB', 3);
+        const request = indexedDB.open('IdeaMediaDB', 4);
         
         request.onupgradeneeded = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
           if (!db.objectStoreNames.contains('media')) {
-            db.createObjectStore('media', { keyPath: 'id' });
+            const mediaStore = db.createObjectStore('media', { keyPath: 'id' });
+            mediaStore.createIndex('ideaId', 'ideaId', { unique: false });
           }
           if (!db.objectStoreNames.contains('history')) {
-            db.createObjectStore('history', { keyPath: 'id' });
+            const historyStore = db.createObjectStore('history', { keyPath: 'id' });
+            historyStore.createIndex('ideaId', 'ideaId', { unique: false });
           }
         };
         
         request.onsuccess = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
-          const transaction = db.transaction(['media'], 'readonly');
-          const store = transaction.objectStore('media');
           const getRequest = store.get(`idea-${ideaId}`);
           
           getRequest.onsuccess = () => {
@@ -406,41 +406,81 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     document.execCommand(command, false, value);
     handleContentChange();
   };
+    // Small delay to ensure focus is complete
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection) {
+        // Fallback: append to end of editor
+        editor.insertAdjacentHTML('beforeend', mediaHtml);
+        return;
+      }
 
-  const insertEmoji = (emoji: string) => {
-    if (!selectedIdea) return;
-    document.execCommand('insertText', false, emoji);
-    setShowEmojiPicker(false);
-    handleContentChange();
+      let range: Range;
+      
+      if (selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
+        
+        // Ensure the range is within the editor
+        if (!editor.contains(range.commonAncestorContainer)) {
+          // Create a new range at the end of the editor
+          range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+        }
+      } else {
+        // Create a range at the end if no selection exists
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+      }
+
+      try {
+        // Clear any existing selection
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Use execCommand for better browser compatibility
+        if (document.queryCommandSupported('insertHTML')) {
+          document.execCommand('insertHTML', false, mediaHtml);
+        } else {
+          // Fallback method
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mediaHtml;
+          
+          const fragment = document.createDocumentFragment();
+          while (tempDiv.firstChild) {
+            fragment.appendChild(tempDiv.firstChild);
+          }
+          
+          range.deleteContents();
+          range.insertNode(fragment);
+          
+          // Move cursor after inserted content
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        
+        // Trigger input event to update content
+        const inputEvent = new Event('input', { bubbles: true });
+        editor.dispatchEvent(inputEvent);
+        
+      } catch (error) {
+        console.error('Error inserting media at cursor:', error);
+        // Final fallback: append to end
+        editor.insertAdjacentHTML('beforeend', mediaHtml);
+      }
+    }, 50);
   };
 
-  const insertMediaAtCursor = (mediaElement: HTMLElement) => {
-    if (!editorRef.current) return;
+  const handleFileUpload = async (files: FileList) => {
+    if (!files.length) return;
 
-    // Focus the editor first to ensure we have a valid selection
-    editorRef.current.focus();
+    // Store current cursor position before processing files
+    const editor = editorRef.current;
+    if (editor) {
+      editor.focus();
     
-    // Get current selection/cursor position
-    const selection = window.getSelection();
-    let range: Range;
-    
-    if (selection && selection.rangeCount > 0) {
-      range = selection.getRangeAt(0);
-    } else {
-      // If no selection, create one at the end of the editor
-      range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false); // Collapse to end
-    }
-
-    // Ensure we're inserting inside the editor
-    if (!editorRef.current.contains(range.commonAncestorContainer)) {
-      range.selectNodeContents(editorRef.current);
-      range.collapse(false);
-    }
-    
-    // Clear any existing selection
-    range.deleteContents();
     
     // Insert the media element at the cursor position
     range.insertNode(mediaElement);
@@ -462,29 +502,51 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
     
     const files = event.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
-        // Check file size (limit to 5MB per image)
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`Image "${file.name}" is too large. Please use images smaller than 5MB.`);
-          return;
-        }
-        
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const imageUrl = e.target?.result as string;
-            const newMediaItem: MediaItem = {
-              id: Date.now().toString() + Math.random(),
-              type: 'image',
-              name: file.name,
-              url: imageUrl,
-              file: file
-            };
+          try {
+            const transaction = db.transaction(['media'], 'readwrite');
+            const store = transaction.objectStore('media');
             
-            setMediaItems(prev => [...prev, newMediaItem]);
-            insertImagePreview(newMediaItem);
-          };
-          reader.readAsDataURL(file);
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const mediaData = {
+                  id,
+                  filename: file.name,
+                  type: file.type,
+                  size: file.size,
+                  data: reader.result,
+                  timestamp: new Date().toISOString(),
+                  ideaId: selectedIdea?.id || 'default'
+                };
+                
+                const addRequest = store.add(mediaData);
+                addRequest.onsuccess = () => {
+                  console.log('Media saved to IndexedDB successfully');
+                  resolve(`indexeddb://${id}`);
+                };
+                addRequest.onerror = (error) => {
+                  console.error('Failed to save to IndexedDB:', error);
+                  // Fallback to blob URL if IndexedDB fails
+                  const blobUrl = URL.createObjectURL(file);
+                  resolve(blobUrl);
+                };
+              } catch (error) {
+                console.error('Error processing file data:', error);
+                const blobUrl = URL.createObjectURL(file);
+                resolve(blobUrl);
+              }
+            };
+            reader.onerror = (error) => {
+              console.error('Failed to read file:', error);
+              const blobUrl = URL.createObjectURL(file);
+              resolve(blobUrl);
+            };
+            reader.readAsDataURL(file);
+          } catch (error) {
+            console.error('Transaction error:', error);
+            const blobUrl = URL.createObjectURL(file);
+            resolve(blobUrl);
+          }
         }
       });
     }
@@ -519,7 +581,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
         };
         reader.readAsDataURL(file);
       });
-    }
+          console.error('Failed to open IndexedDB:', error);
+          // Fallback to blob URL if IndexedDB is not available
+          const blobUrl = URL.createObjectURL(file);
+          resolve(blobUrl);
     event.target.value = '';
   };
 
@@ -727,7 +792,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
             container.outerHTML,
             `<div class="preview-document"><p><strong>📄 Document: ${mediaItem.name}</strong></p></div>`
           );
-        }
+        console.error('IndexedDB not supported:', error);
+        // Fallback to blob URL if IndexedDB is not supported
+        const blobUrl = URL.createObjectURL(file);
+        resolve(blobUrl);
       }
     });
     
@@ -908,59 +976,88 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ selectedIdea, ideas, on
           }
         }
       }
-
-      // Add media summary at the end
-      if (mediaItems.length > 0) {
-        if (yPosition > pageHeight - 100) {
-          pdf.addPage();
-          yPosition = margin;
-        }
         
-        yPosition += 10;
-        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(14);
         pdf.setFont('helvetica', 'bold');
         pdf.text('Media Summary', margin, yPosition);
         yPosition += 10;
         
         pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
+        console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
         
-        const images = mediaItems.filter(item => item.type === 'image');
-        const documents = mediaItems.filter(item => item.type === 'document');
-        
-        if (images.length > 0) {
-          pdf.text(`Images (${images.length}):`, margin, yPosition);
-          yPosition += 6;
-          images.forEach(img => {
-            pdf.text(`• ${img.name}`, margin + 5, yPosition);
-            yPosition += 5;
-          });
-          yPosition += 5;
-        }
-        
-        if (documents.length > 0) {
-          pdf.text(`Documents (${documents.length}):`, margin, yPosition);
-          yPosition += 6;
-          documents.forEach(doc => {
-            pdf.text(`• ${doc.name} (${getFileExtension(doc.name).toUpperCase()})`, margin + 5, yPosition);
-            yPosition += 5;
-          });
-        }
-      }
+        try {
+          const mediaUrl = await saveToIndexedDB(file, fileId);
+          console.log(`File saved with URL: ${mediaUrl}`);
+          
+          if (file.type.startsWith('image/')) {
+            const imageHtml = `
+              <div class="media-container" contenteditable="false">
+                <div class="image-preview">
+                  <img src="${mediaUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${mediaUrl}', '${file.name}')" />
+                  <div class="media-caption">${file.name}</div>
+                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
+                </div>
+              </div>
+            `;
+            insertMediaAtCursor(imageHtml);
+          } else {
+            const documentHtml = `
+              <div class="media-container" contenteditable="false">
+                <div class="document-preview">
+                  <div class="doc-icon">${getFileIcon(file.type)}</div>
+                  <div class="doc-info">
+                    <div class="doc-name">${file.name}</div>
+                    <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)}</div>
+                    <div class="doc-actions">
+                      <button onclick="viewDocument('${mediaUrl}', '${file.name}', '${file.type}')">View</button>
+                      <button onclick="downloadDocument('${mediaUrl}', '${file.name}')">Download</button>
+                    </div>
 
+                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
       // Add footer with timestamp
-      const timestamp = new Date().toLocaleString();
       pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'italic');
-      pdf.text(`Generated on ${timestamp}`, margin, pageHeight - 10);
-
+            `;
+            insertMediaAtCursor(documentHtml);
+          }
+        } catch (storageError) {
+          console.error(`Storage error for file ${file.name}:`, storageError);
+          
+          // Create blob URL as fallback
+          const blobUrl = URL.createObjectURL(file);
+          
+          if (file.type.startsWith('image/')) {
+            const imageHtml = `
+              <div class="media-container" contenteditable="false">
+                <div class="image-preview">
+                  <img src="${blobUrl}" alt="${file.name}" style="max-width: 300px; max-height: 200px; object-fit: contain;" onclick="openImageModal('${blobUrl}', '${file.name}')" />
+                  <div class="media-caption">${file.name} (Temporary)</div>
+                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
+                </div>
+              </div>
+            `;
+            insertMediaAtCursor(imageHtml);
+          } else {
+            const documentHtml = `
+              <div class="media-container" contenteditable="false">
+                <div class="document-preview">
+                  <div class="doc-icon">${getFileIcon(file.type)}</div>
+                  <div class="doc-info">
+                    <div class="doc-name">${file.name}</div>
+                    <div class="doc-type">${file.type || 'Unknown'} • ${formatFileSize(file.size)} (Temporary)</div>
+                    <div class="doc-actions">
+                      <button onclick="viewDocument('${blobUrl}', '${file.name}', '${file.type}')">View</button>
+                      <button onclick="downloadDocument('${blobUrl}', '${file.name}')">Download</button>
+                    </div>
+                  </div>
+                  <button class="media-delete-btn" onclick="deleteMedia(this)" data-media-id="${fileId}">×</button>
+                </div>
+              </div>
+            `;
+            insertMediaAtCursor(documentHtml);
+          }
       // Save the PDF
       pdf.save(`${selectedIdea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+        console.error(`Error uploading file ${file.name}:`, error);
+        alert(`Failed to upload ${file.name}. ${error instanceof Error ? error.message : 'Please try again.'}`);
       alert('Error generating PDF. Please try again.');
     }
   };
